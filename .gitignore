@@ -50,3 +50,7 @@ security/*-certs/
 
 # Backup files
 *.backup*
+
+# Deployment audit reports
+deploy/*tree*.txt
+deploy_tree.txt
