@@ -1,0 +1,242 @@
+--- a/routes/admin_member_routes.py
++++ b/routes/admin_member_routes.py
+@@ -58,6 +58,28 @@
+     return session.get("admin_logged_in") is True
+ 
+ 
++def _admin_csrf_token() -> str:
++    """Return the administrator CSRF token, creating one for legacy sessions."""
++    token = str(session.get("admin_csrf_token") or "")
++    if not token:
++        token = secrets.token_urlsafe(32)
++        session["admin_csrf_token"] = token
++    return token
++
++
++def _valid_admin_csrf() -> bool:
++    expected = str(session.get("admin_csrf_token") or "")
++    supplied = str(request.form.get("csrf_token") or "")
++    return bool(expected and supplied and hmac.compare_digest(expected, supplied))
++
++
++def _run_feishu_registration_import():
++    """Lazy import keeps normal admin page loading independent of the Feishu SDK."""
++    from services.feishu_sync_service import sync_feishu_to_local
++
++    return sync_feishu_to_local()
++
++
+ _SUBSCRIPTION_AUDIT_CODES = {
+     "open": "admin.subscription_activate",
+     "renew": "admin.subscription_renew",
+@@ -170,13 +192,34 @@
+             .member-list-page {{ width: 100%; min-width: 0; }}
+             .member-list-heading {{
+                 display: flex;
+-                align-items: baseline;
++                align-items: center;
+                 justify-content: space-between;
+-                gap: 12px;
++                gap: 16px;
+                 margin-bottom: 10px;
+             }}
++            .member-list-title-group {{ display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }}
+             .member-list-heading h2 {{ margin: 0; }}
+             .member-list-count {{ color: #667085; font-size: 14px; white-space: nowrap; }}
++            .member-list-actions {{ display: flex; align-items: center; gap: 8px; margin: 0; }}
++            .primary-action-button {{
++                min-height: 38px;
++                padding: 8px 16px;
++                border: 1px solid #175cd3;
++                border-radius: 7px;
++                color: #fff;
++                background: #175cd3;
++                font-weight: 700;
++            }}
++            .primary-action-button:hover {{ background: #1849a9; border-color: #1849a9; }}
++            .sync-result-card {{
++                max-width: 760px;
++                padding: 18px 20px;
++                border: 1px solid #d7dee8;
++                border-radius: 10px;
++                background: #fff;
++                box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
++            }}
++            .sync-result-card p {{ margin: 8px 0; }}
+             .table-scroll-tip {{ margin: 8px 0 10px; color: #667085; font-size: 14px; }}
+ 
+             .member-table-viewport {{
+@@ -324,6 +367,9 @@
+ 
+             @media (max-width: 900px) {{
+                 body {{ padding: 12px; }}
++                .member-list-heading {{ align-items: stretch; flex-direction: column; }}
++                .member-list-actions {{ width: 100%; }}
++                .primary-action-button {{ width: 100%; }}
+                 .member-table-viewport {{ max-height: calc(100vh - 170px); }}
+             }}
+         </style>
+@@ -680,11 +726,19 @@
+         </tr>
+         """)
+ 
++    csrf_token = escape(_admin_csrf_token())
+     return _page("用户列表", f"""
+     <div class="member-list-page">
+         <div class="member-list-heading">
+-            <h2>用户列表</h2>
+-            <span class="member-list-count">当前显示 {len(members)} 位用户</span>
++            <div class="member-list-title-group">
++                <h2>用户列表</h2>
++                <span class="member-list-count">当前显示 {len(members)} 位用户</span>
++            </div>
++            <form class="member-list-actions" method="post" action="/admin/members/import-feishu-registrations"
++                  onsubmit="return confirm('仅导入飞书会员表中“用户ID为空”的新登记记录，不会用飞书内容覆盖已有本地用户、Token、套餐或权限。确认执行吗？')">
++                <input type="hidden" name="csrf_token" value="{csrf_token}">
++                <button class="primary-action-button" type="submit">导入飞书新登记</button>
++            </form>
+         </div>
+         {_admin_nav()}
+         <p class="table-scroll-tip">表格宽度超过窗口时，可在表格区域内左右滑动；ID、用户名和操作列会保持固定。</p>
+@@ -716,6 +770,141 @@
+     </div>
+     """)
+ 
++
++@admin_member_bp.route("/members/import-feishu-registrations", methods=["POST"])
++def admin_import_feishu_registrations():
++    if not require_admin_session():
++        return redirect("/admin/login")
++
++    audit_request = {"trigger": "admin_members_page"}
++    action_code = "admin.feishu_registration_import"
++    action_name = "导入飞书新登记"
++
++    if not _valid_admin_csrf():
++        _audit_admin_operation(
++            target_user=None,
++            action_category="membership",
++            action_code=action_code,
++            action_name=action_name,
++            success=False,
++            status_code=400,
++            error_code="invalid_csrf",
++            error_message="管理员请求校验失败",
++            request_data=audit_request,
++        )
++        return _page(
++            "导入失败",
++            f"""
++            <h2 class="error">请求校验失败</h2>
++            {_admin_nav()}
++            <div class="sync-result-card">
++                <p>当前管理员会话已过期或请求来源无效，本次没有执行飞书导入。</p>
++                <p><a href="/admin/members/list">返回用户列表</a></p>
++            </div>
++            """,
++        ), 400
++
++    try:
++        result = _run_feishu_registration_import()
++    except Exception as exc:
++        logging.exception("[后台] 飞书新登记导入发生未处理异常: %s", exc)
++        _audit_admin_operation(
++            target_user=None,
++            action_category="membership",
++            action_code=action_code,
++            action_name=action_name,
++            success=False,
++            status_code=500,
++            error_code="internal_error",
++            error_message="飞书新登记导入发生未处理异常",
++            request_data=audit_request,
++        )
++        return _page(
++            "导入失败",
++            f"""
++            <h2 class="error">飞书新登记导入失败</h2>
++            {_admin_nav()}
++            <div class="sync-result-card">
++                <p>导入失败，请查看服务器日志。</p>
++                <p><a href="/admin/members/list">返回用户列表</a></p>
++            </div>
++            """,
++        ), 500
++
++    counts_value = getattr(result, "counts", None)
++    if counts_value is None:
++        counts_value = tuple(result) if result is not None else (0, 0)
++    counts = tuple(counts_value)
++    added_count = int(counts[0]) if len(counts) >= 1 else 0
++    linked_count = int(counts[1]) if len(counts) >= 2 else 0
++    status = str(getattr(result, "status", "ok") or "ok")
++    raw_message = str(getattr(result, "message", "") or "")
++
++    status_map = {
++        "ok": (200, True, "ok", "飞书新登记导入完成", raw_message or "飞书登记导入完成"),
++        "empty": (200, True, "ok", "没有需要导入的新登记", raw_message or "飞书会员表没有可导入记录"),
++        "busy": (409, False, "error", "本次导入未执行", "其他飞书同步任务正在运行，请稍后重试。"),
++        "database_busy": (503, False, "error", "本次导入未完成", "数据库正在处理其他写入任务，请稍后重试。"),
++        "schema_not_ready": (503, False, "error", "本次导入未完成", "数据库尚未完成启动初始化，请检查服务启动状态。"),
++        "skipped": (503, False, "error", "本次导入已跳过", raw_message or "飞书同步未启用或配置不完整。"),
++        "error": (500, False, "error", "飞书新登记导入失败", "导入失败，请查看服务器日志。"),
++    }
++    http_status, success, title_class, heading, display_message = status_map.get(
++        status,
++        (500, False, "error", "飞书新登记导入失败", "导入失败，请查看服务器日志。"),
++    )
++
++    status_labels = {
++        "ok": "成功",
++        "empty": "无新记录",
++        "busy": "同步任务繁忙",
++        "database_busy": "数据库繁忙",
++        "schema_not_ready": "数据库未初始化",
++        "skipped": "已跳过",
++        "error": "失败",
++    }
++    status_label = status_labels.get(status, "失败")
++    audit_error_message = "" if success else display_message
++    try:
++        _, audit_ok = _audit_admin_operation(
++            target_user=None,
++            action_category="membership",
++            action_code=action_code,
++            action_name=action_name,
++            success=success,
++            status_code=http_status,
++            error_code="" if success else status,
++            error_message=audit_error_message,
++            after_data={
++                "status": status,
++                "added_count": added_count,
++                "linked_count": linked_count,
++            },
++            request_data=audit_request,
++        )
++    except Exception:
++        logging.exception("[后台] 飞书新登记导入审计写入失败: status=%s", status)
++        audit_ok = False
++
++    audit_warning = "" if audit_ok else '<p class="error">导入结果已产生，但审计系统异常，请立即检查服务器日志。</p>'
++    return _page(
++        heading,
++        f"""
++        <h2 class="{title_class}">{escape(heading)}</h2>
++        {_admin_nav()}
++        <div class="sync-result-card">
++            <p>{escape(display_message)}</p>
++            <p><b>新增本地用户：{added_count}</b></p>
++            <p><b>关联已有用户：{linked_count}</b></p>
++            <p><b>执行状态：</b>{escape(status_label)}</p>
++            {audit_warning}
++            <p class="muted">本操作只处理飞书会员表中用户ID为空的新登记，不会从飞书覆盖本地 Token、套餐、权限或已有用户资料。</p>
++            <p><a href="/admin/members/list">返回用户列表</a></p>
++        </div>
++        """,
++    ), http_status
++
++
+ @admin_member_bp.route("/members/subscriptions/<int:subscription_id>/cancel", methods=["POST"])
+ def admin_cancel_scheduled_subscription(subscription_id: int):
+     if not require_admin_session():

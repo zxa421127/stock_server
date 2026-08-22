@@ -1,0 +1,905 @@
+--- a/.env.example
++++ b/.env.example
+@@ -135,7 +135,7 @@
+ FEISHU_EXTENDED_MEMBER_FIELDS_ENABLED=False
+ BIDDING_SYNC_HOUR=18
+ BIDDING_SYNC_MINUTE=0
+-BIDDING_SYNC_COUNT=200
++BIDDING_SYNC_COUNT=10000
+ # 自动创建缺失的竞价字段；遇到已有字段类型不兼容时会停止同步，不会直接改坏旧字段。
+ FEISHU_BIDDING_AUTO_CREATE_FIELDS=true
+ # 默认禁止将 Tushare partial 降级结果写入开盘啦竞价表。
+@@ -161,6 +161,9 @@
+ KAIPANLA_POST_OPEN_SNAPSHOT_HOUR=9
+ KAIPANLA_POST_OPEN_SNAPSHOT_MINUTE=31
+ KAIPANLA_POST_OPEN_SNAPSHOT_SECOND=0
++KAIPANLA_CLOSE_SNAPSHOT_HOUR=15
++KAIPANLA_CLOSE_SNAPSHOT_MINUTE=1
++KAIPANLA_CLOSE_SNAPSHOT_SECOND=0
+ KAIPANLA_SNAPSHOT_WINDOW_SECONDS=120
+ KAIPANLA_SNAPSHOT_POLL_SECONDS=5
+ KAIPANLA_SNAPSHOT_PAGE_SIZE=1000
+--- a/config.py
++++ b/config.py
+@@ -308,7 +308,7 @@
+ FEISHU_EXTENDED_MEMBER_FIELDS_ENABLED = _get_bool("FEISHU_EXTENDED_MEMBER_FIELDS_ENABLED", False)
+ BIDDING_SYNC_HOUR = _get_int("BIDDING_SYNC_HOUR", 18, 0, 23)
+ BIDDING_SYNC_MINUTE = _get_int("BIDDING_SYNC_MINUTE", 0, 0, 59)
+-BIDDING_SYNC_COUNT = _get_int("BIDDING_SYNC_COUNT", 200, 1, 10000)
++BIDDING_SYNC_COUNT = _get_int("BIDDING_SYNC_COUNT", 10000, 10000, 10000)
+ # Add only missing bidding fields; never mutate incompatible existing field types.
+ FEISHU_BIDDING_AUTO_CREATE_FIELDS = _get_bool("FEISHU_BIDDING_AUTO_CREATE_FIELDS", True)
+ # Disabled by default: a Tushare partial fallback must not silently enter the Kaipanla table.
+@@ -335,6 +335,9 @@
+ KAIPANLA_POST_OPEN_SNAPSHOT_HOUR = _get_int("KAIPANLA_POST_OPEN_SNAPSHOT_HOUR", 9, 0, 23)
+ KAIPANLA_POST_OPEN_SNAPSHOT_MINUTE = _get_int("KAIPANLA_POST_OPEN_SNAPSHOT_MINUTE", 31, 0, 59)
+ KAIPANLA_POST_OPEN_SNAPSHOT_SECOND = _get_int("KAIPANLA_POST_OPEN_SNAPSHOT_SECOND", 0, 0, 59)
++KAIPANLA_CLOSE_SNAPSHOT_HOUR = _get_int("KAIPANLA_CLOSE_SNAPSHOT_HOUR", 15, 0, 23)
++KAIPANLA_CLOSE_SNAPSHOT_MINUTE = _get_int("KAIPANLA_CLOSE_SNAPSHOT_MINUTE", 1, 0, 59)
++KAIPANLA_CLOSE_SNAPSHOT_SECOND = _get_int("KAIPANLA_CLOSE_SNAPSHOT_SECOND", 0, 0, 59)
+ KAIPANLA_SNAPSHOT_WINDOW_SECONDS = _get_int("KAIPANLA_SNAPSHOT_WINDOW_SECONDS", 120, 30, 1800)
+ KAIPANLA_SNAPSHOT_POLL_SECONDS = _get_int("KAIPANLA_SNAPSHOT_POLL_SECONDS", 5, 1, 60)
+ KAIPANLA_SNAPSHOT_PAGE_SIZE = _get_int("KAIPANLA_SNAPSHOT_PAGE_SIZE", 1000, 1, 1000)
+--- a/integrations/market_data/kaipanla/schema.py
++++ b/integrations/market_data/kaipanla/schema.py
+@@ -3,7 +3,7 @@
+ from __future__ import annotations
+ 
+ SCHEMA_VERSION = "kaipanla_bidding.v2"
+-SNAPSHOT_TYPES = ("auction", "post_open")
++SNAPSHOT_TYPES = ("auction", "post_open", "close")
+ 
+ # These are upstream source positions used internally while converting the raw
+ # payload. They are not public business fields.
+@@ -63,5 +63,5 @@
+     "main_buy_amount": "开盘啦原始数组字段14，对应中文业务字段‘主力买入’",
+     "main_sell_amount": "开盘啦原始数组字段15的绝对值，对应非负‘主力卖出额’",
+     "limit_up_days": "从开盘啦主字段‘连板’解析出的板数；解析失败为空",
+-    "snapshot_type": "正式快照类型：auction 或 post_open",
++    "snapshot_type": "正式快照类型：auction、post_open 或 close",
+ }
+--- a/integrations/market_data/kaipanla/adapter.py
++++ b/integrations/market_data/kaipanla/adapter.py
+@@ -125,7 +125,7 @@
+ def _validate_snapshot_type(value: Any) -> str:
+     text = str(value or "auction").strip().lower()
+     if text not in SNAPSHOT_TYPES:
+-        raise ValueError("snapshot_type 只允许 auction 或 post_open")
++        raise ValueError("snapshot_type 只允许 auction、post_open 或 close")
+     return text
+ 
+ 
+--- a/services/api_doc_catalog.py
++++ b/services/api_doc_catalog.py
+@@ -102,9 +102,9 @@
+   'has_data': True},
+  {'provider': 'kaipanla',
+   'api_name': 'morning_bidding_history',
+-  'title': '开盘啦早盘竞价历史快照',
++  'title': '开盘啦竞价三时点历史快照',
+   'category': '开盘啦',
+-  'category_description': '开盘啦早盘竞价实时数据与历史持久化快照接口，属于特殊权限套餐。',
++  'category_description': '开盘啦竞价实时数据与09:26、09:31、15:01三时点持久化快照接口，属于特殊权限套餐。',
+   'category_sort_order': 10,
+   'sort_order': 20,
+   'method': 'GET',
+@@ -114,8 +114,8 @@
+   'permission_label': '特殊权限（开盘啦）',
+   'description': '接口英文名：morning_bidding_history\n'
+                  '套餐权限：特殊权限（开盘啦）\n'
+-                 '默认查询auction快照；snapshot_type只允许auction或post_open。post_open不存在时返回404，不会以auction冒充精确命中。\n'
+-                 'auction在交易日09:26:05采集，post_open在09:31:00采集；两类快照互不覆盖。',
++                 '默认查询auction快照；snapshot_type只允许auction、post_open或close。post_open或close不存在时返回404，不会以auction或Tushare冒充精确命中。\n'
++                 'auction在交易日09:26:05采集，post_open在09:31:00采集，close在15:01:00采集；三类快照互不覆盖。',
+   'params': [{'name': 'trade_date',
+               'type': 'string',
+               'required': '否',
+@@ -125,7 +125,7 @@
+               'type': 'string',
+               'required': '否',
+               'example': 'auction',
+-              'description': '快照类型，只允许 auction 或 post_open；默认auction'},
++              'description': '快照类型，只允许 auction、post_open 或 close；默认auction'},
+              {'name': 'snapshot_id',
+               'type': 'string',
+               'required': '否',
+@@ -136,7 +136,7 @@
+               'required': '否',
+               'example': '1000',
+               'description': '最大返回条数，服务端限制1-10000'}],
+-  'request_example': 'GET /api/v1/market/kaipanla/morning_bidding/history?trade_date=20260717&snapshot_type=auction',
++  'request_example': 'GET /api/v1/market/kaipanla/morning_bidding/history?trade_date=20260717&snapshot_type=auction\nGET /api/v1/market/kaipanla/morning_bidding/history?trade_date=20260717&snapshot_type=close',
+   'response_example': '{\n'
+                       '  "success": true,\n'
+                       '  "code": 200,\n'
+--- a/services/feishu_sync_service.py
++++ b/services/feishu_sync_service.py
+@@ -713,9 +713,10 @@
+ def _sync_bidding_to_feishu_impl() -> SyncResult:
+     _ensure_runtime_db_ready(_RUNTIME_BIDDING_TABLES)
+     logging.info("=" * 60)
+-    logging.info("[竞价同步] 从本地完整双快照同步到飞书")
++    logging.info("[竞价同步] 从本地完整三时点快照同步到飞书")
+     logging.info("=" * 60)
+ 
++    from integrations.market_data.kaipanla.schema import SNAPSHOT_TYPES
+     from services.kaipanla_bidding_service import get_kaipanla_bidding_service
+     from utils.common import df_to_list
+ 
+@@ -724,7 +725,7 @@
+     service = get_kaipanla_bidding_service()
+     data_list = []
+     errors = []
+-    for snapshot_type in ("auction", "post_open"):
++    for snapshot_type in SNAPSHOT_TYPES:
+         result = run_db_write_with_retry(
+             lambda snapshot_type=snapshot_type: service.query_history({
+                 "trade_date": trade_date,
+@@ -764,11 +765,15 @@
+         create_missing=bool(getattr(config, "FEISHU_BIDDING_AUTO_CREATE_FIELDS", True))
+     )
+     success_count, fail_count = bitable.batch_add_bidding_records(data_list)
+-    message = "竞价双快照写入完成"
++    message = "竞价三时点快照写入完成"
+     if errors:
+         message += "；" + "；".join(errors)
+     logging.info("[竞价同步] 写入完成：成功 %d 条，失败 %d 条", success_count, fail_count)
+-    return SyncResult((success_count, fail_count), status="ok", message=message)
++    return SyncResult(
++        (success_count, fail_count),
++        status="partial" if errors else "ok",
++        message=message,
++    )
+ 
+ 
+ def sync_bidding_to_feishu() -> SyncResult:
+@@ -803,9 +808,12 @@
+     sync_minute = config.BIDDING_SYNC_MINUTE
+     if now.hour == sync_hour and now.minute >= sync_minute:
+         logging.info("[竞价同步] 到达同步时间 %s:%02d，开始同步", sync_hour, sync_minute)
+-        success_count, _fail_count = sync_bidding_to_feishu()
+-        if success_count > 0:
++        result = sync_bidding_to_feishu()
++        success_count, _fail_count = result
++        if success_count > 0 and result.status == "ok":
+             _last_bidding_sync_date = today_str
++        elif result.status == "partial":
++            logging.warning("[竞价同步] 三时点快照尚未齐全，本日稍后继续重试: %s", result.message)
+ 
+ 
+ # ==================== 同步服务线程 ====================
+--- a/services/kaipanla_bidding_service.py
++++ b/services/kaipanla_bidding_service.py
+@@ -22,7 +22,7 @@
+ _SHANGHAI = ZoneInfo("Asia/Shanghai")
+ _DATE_RE = re.compile(r"^\d{8}$")
+ # Accept current typed ids and legacy ids so old history remains addressable.
+-_SNAPSHOT_RE = re.compile(r"^\d{8}_\d{6}_(?:(?:auction|post_open)_)?[0-9a-f]{12}$")
++_SNAPSHOT_RE = re.compile(r"^\d{8}_\d{6}_(?:(?:auction|post_open|close)_)?[0-9a-f]{12}$")
+ _AUCTION_WINDOW_START = clock_time(9, 15, 0)
+ _AUCTION_WINDOW_END = clock_time(9, 30, 0)
+ _FALLBACK_WARNING = "未找到开盘啦历史快照，已降级为 Tushare 部分数据；开盘啦特有竞价字段无法还原"
+@@ -356,11 +356,11 @@
+             freshness = "latest_snapshot_on_or_before" if fallback else ("exact_snapshot" if requested else "latest_snapshot")
+             return self._snapshot_response(snap, params, requested, fallback_used=fallback, freshness=freshness)
+ 
+-        # post_open has no equivalent trustworthy upstream history source. Never
+-        # substitute an auction snapshot or Tushare data while claiming this type.
+-        if snapshot_type == "post_open":
++        # post_open and close have no equivalent trustworthy upstream history source.
++        # Never substitute an auction snapshot or Tushare data while claiming either type.
++        if snapshot_type in {"post_open", "close"}:
+             return ProviderResponse(
+-                error="未找到指定条件的 post_open 历史快照",
++                error=f"未找到指定条件的 {snapshot_type} 历史快照",
+                 meta={"http_status": 404, "requested_trade_date": requested, "actual_trade_date": None, "snapshot_type": snapshot_type, "fallback_used": False},
+             )
+ 
+--- a/services/kaipanla_snapshot_repository.py
++++ b/services/kaipanla_snapshot_repository.py
+@@ -14,17 +14,16 @@
+ import pandas as pd
+ 
+ from db_utils import get_conn
+-from integrations.market_data.kaipanla.schema import SCHEMA_VERSION
++from integrations.market_data.kaipanla.schema import SCHEMA_VERSION, SNAPSHOT_TYPES
+ 
+ ConnectionFactory = Callable[[], sqlite3.Connection]
+-SNAPSHOT_TYPES = ("auction", "post_open")
+ 
+ 
+ def validate_snapshot_type(value: Any, default: str = "auction") -> str:
+     """Normalize and validate the public snapshot type enum."""
+     text = str(value or default).strip().lower()
+     if text not in SNAPSHOT_TYPES:
+-        raise ValueError("snapshot_type 只允许 auction 或 post_open")
++        raise ValueError("snapshot_type 只允许 auction、post_open 或 close")
+     return text
+ 
+ 
+@@ -71,7 +70,7 @@
+         "WHERE snapshot_type IS NULL OR TRIM(snapshot_type)=''"
+     )
+ 
+-    # The legacy uniqueness omitted snapshot_type and would make the two official
++    # The legacy uniqueness omitted snapshot_type and would make official
+     # captures overwrite/deduplicate each other when their payloads match.
+     cursor.execute("DROP INDEX IF EXISTS ux_kaipanla_snapshot_trade_hash")
+     cursor.execute(
+--- a/services/kaipanla_snapshot_scheduler.py
++++ b/services/kaipanla_snapshot_scheduler.py
+@@ -1,5 +1,5 @@
+ # -*- coding: utf-8 -*-
+-"""Shanghai-time dual snapshot scheduler with per-type SQLite leases."""
++"""Shanghai-time three-snapshot scheduler with per-type SQLite leases."""
+ from __future__ import annotations
+ 
+ import logging
+@@ -33,6 +33,9 @@
+     max_pages: int
+     lease_seconds: int
+     retention_days: int
++    close_hour: int = 15
++    close_minute: int = 1
++    close_second: int = 0
+ 
+     @classmethod
+     def from_config(cls) -> "SnapshotSchedulerSettings":
+@@ -50,6 +53,9 @@
+             max_pages=int(getattr(config, "KAIPANLA_SNAPSHOT_MAX_PAGES", 10)),
+             lease_seconds=int(getattr(config, "KAIPANLA_SNAPSHOT_LEASE_SECONDS", 300)),
+             retention_days=int(getattr(config, "KAIPANLA_SNAPSHOT_RETENTION_DAYS", 1095)),
++            close_hour=int(getattr(config, "KAIPANLA_CLOSE_SNAPSHOT_HOUR", 15)),
++            close_minute=int(getattr(config, "KAIPANLA_CLOSE_SNAPSHOT_MINUTE", 1)),
++            close_second=int(getattr(config, "KAIPANLA_CLOSE_SNAPSHOT_SECOND", 0)),
+         )
+ 
+ 
+@@ -73,6 +79,7 @@
+         targets = {
+             "auction": (self.settings.auction_hour, self.settings.auction_minute, self.settings.auction_second),
+             "post_open": (self.settings.post_open_hour, self.settings.post_open_minute, self.settings.post_open_second),
++            "close": (self.settings.close_hour, self.settings.close_minute, self.settings.close_second),
+         }
+         for snapshot_type, (hour, minute, second) in targets.items():
+             target = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
+@@ -123,7 +130,18 @@
+             self.repository.release_lease(lease_name, self.owner_id)
+ 
+     def _loop(self) -> None:
+-        logging.info("[开盘啦快照] 双快照调度器启动：auction %02d:%02d:%02d，post_open %02d:%02d:%02d", self.settings.auction_hour, self.settings.auction_minute, self.settings.auction_second, self.settings.post_open_hour, self.settings.post_open_minute, self.settings.post_open_second)
++        logging.info(
++            "[开盘啦快照] 三时点调度器启动：auction %02d:%02d:%02d，post_open %02d:%02d:%02d，close %02d:%02d:%02d",
++            self.settings.auction_hour,
++            self.settings.auction_minute,
++            self.settings.auction_second,
++            self.settings.post_open_hour,
++            self.settings.post_open_minute,
++            self.settings.post_open_second,
++            self.settings.close_hour,
++            self.settings.close_minute,
++            self.settings.close_second,
++        )
+         while not self._stop_event.is_set():
+             try:
+                 result = self.run_once()
+--- a/tools/db/migrate_kaipanla_dual_snapshot.py
++++ b/tools/db/migrate_kaipanla_dual_snapshot.py
+@@ -1,5 +1,5 @@
+ # -*- coding: utf-8 -*-
+-"""Safely migrate the Kaipanla snapshot table to the v2 dual-snapshot schema.
++"""Safely migrate the Kaipanla snapshot table to the v2 three-snapshot-compatible schema.
+ 
+ The application also performs this migration idempotently from ``init_db``.
+ This command exists for controlled production rollout: it validates the same
+@@ -104,8 +104,8 @@
+     if "snapshot_type" not in after["columns"]:
+         raise RuntimeError("迁移后缺少 snapshot_type 列")
+     if _REQUIRED_INDEX not in after["indexes"] or _LEGACY_INDEX in after["indexes"]:
+-        raise RuntimeError("迁移后快照唯一索引不符合双快照要求")
+-    invalid = set(after["snapshot_type_counts"]) - {"auction", "post_open"}
++        raise RuntimeError("迁移后快照唯一索引不符合三时点快照要求")
++    invalid = set(after["snapshot_type_counts"]) - {"auction", "post_open", "close"}
+     if invalid:
+         raise RuntimeError(f"迁移后发现非法 snapshot_type: {sorted(invalid)}")
+     return after
+@@ -150,7 +150,7 @@
+ 
+ 
+ def main() -> int:
+-    parser = argparse.ArgumentParser(description="安全迁移开盘啦v2双快照表结构")
++    parser = argparse.ArgumentParser(description="安全迁移开盘啦v2三时点兼容表结构")
+     parser.add_argument("--db", default=config.DB_FILE, help="SQLite数据库路径")
+     parser.add_argument("--backup", help="备份文件路径；默认自动生成且绝不覆盖")
+     parser.add_argument("--check-only", action="store_true", help="仅检查，不修改数据库")
+--- a/docs/CHANGELOG.md
++++ b/docs/CHANGELOG.md
+@@ -1,5 +1,13 @@
+ # Changelog
+ 
++## Kaipanla v2 Three-Time Snapshot Patch — 2026-07-24
++
++- 在现有 `auction`（09:26:05）和 `post_open`（09:31:00）基础上新增 `close`（15:01:00）。
++- 三类快照共用现有 SQLite 表、类型隔离唯一索引、快照 ID 和跨进程租约，互不覆盖。
++- `post_open` 与 `close` 都是严格时点快照；缺失时返回 404，禁止以 `auction` 或 Tushare 数据冒充。
++- 飞书竞价同步改为读取并写入三类完整本地快照，同一股票每天按“快照ID+股票代码”保留三条记录。
++- 新增收盘快照配置、三时点调度/仓库/服务测试，并更新 API 与部署文档。
++
+ ## Kaipanla v2 Dual Snapshot & Security Patch — 2026-07-23
+ 
+ - `kaipanla_bidding.v2` 直接升级为双快照正式结构，不新增 v3。
+--- a/docs/FEISHU_KAIPANLA_FIELD_MAPPING_V2.md
++++ b/docs/FEISHU_KAIPANLA_FIELD_MAPPING_V2.md
+@@ -26,7 +26,7 @@
+ | 交易日期 | 文本 | trade_date |
+ | 快照时间 | 日期时间 | snapshot_time |
+ | 快照ID | 文本 | snapshot_id |
+-| 快照类型 | 文本或单选 | auction / post_open |
++| 快照类型 | 文本或单选 | auction / post_open / close |
+ | 数据源 | 文本或单选 | source_provider |
+ | 数据质量 | 文本或单选 | data_quality |
+ | Schema版本 | 文本 | kaipanla_bidding.v2 |
+@@ -35,7 +35,7 @@
+ 
+ 1. 暂停飞书同步服务，避免旧代码在改表期间重新建列。
+ 2. 将旧列“竞价竞额”改名为“竞价净额”。
+-3. 新增“快照类型”列；建议先使用文本，确认稳定后可改为单选并配置 `auction`、`post_open`。
++3. 新增“快照类型”列；建议先使用文本，确认稳定后可改为单选并配置 `auction`、`post_open`、`close`。
+ 4. 核对上表保留字段及类型。
+ 5. 删除已废弃的数字下标列、签名卖出列、技术校验列及其他连板来源列。
+ 6. 覆盖本补丁代码并执行数据库迁移与字段检查。
+@@ -47,7 +47,17 @@
+ 
+ - 同步只读取已经成功落库、`data_quality=complete`、`source_provider=kaipanla_snapshot` 的快照。
+ - 使用“快照ID + 股票代码”作为幂等键；一次读取现有索引后批量新增或更新，不逐行扫描整表。
+-- 两类快照可在同一交易日同时写入。
++- 三类快照可在同一交易日同时写入；同一股票每天保留 `auction`、`post_open`、`close` 三条记录。
+ - 缺失数字保持为空，不统一转为 `0`。
+ - 日期解析失败保持为空并写日志，不使用当前时间兜底。
+ - 全局进程锁阻止会员同步和竞价同步并发重复执行；锁冲突返回 `busy`。
++
++## 三时点含义
++
++| 快照类型 | 默认上海时间 | 说明 |
++|---|---:|---|
++| `auction` | 09:26:05 | 集合竞价结束附近 |
++| `post_open` | 09:31:00 | 正式开盘约1分钟后 |
++| `close` | 15:01:00 | 收盘后约1分钟；主力资金、当前价格和实时涨幅为该时点值 |
++
++`close` 不覆盖早盘记录。飞书表无需增加新列；若“快照类型”为单选，请增加 `close` 选项。
+--- a/docs/KAIPANLA_FIELD_MAPPING_V2.md
++++ b/docs/KAIPANLA_FIELD_MAPPING_V2.md
+@@ -3,7 +3,7 @@
+ ## 1. Schema
+ 
+ - `schema_version` 固定为 `kaipanla_bidding.v2`。
+-- 正式快照类型仅允许 `auction`、`post_open`。
++- 正式快照类型仅允许 `auction`、`post_open`、`close`。
+ - 上游完整响应继续保存在压缩 `raw_payload` 中；公开 API、飞书和标准业务结果不返回数字下标字段。
+ - 缺失值保持为空；只有上游真实返回数值 `0` 时才输出 `0`。
+ 
+@@ -41,14 +41,19 @@
+ 
+ 不再向外输出其他来源、冲突标记或补充接口字段。
+ 
+-## 5. 双快照
++## 5. 三时点快照
+ 
+ | 类型 | 上海时间 | 用途 |
+ |---|---:|---|
+ | `auction` | 09:26:05 | 正式集合竞价状态，用于历史、复盘、回测和审计 |
+ | `post_open` | 09:31:00 | 补充开盘后才出现的主力资金等数据，不回填或覆盖 `auction` |
++| `close` | 15:01:00 | 保存收盘后约1分钟的价格、涨幅和主力资金状态，不覆盖前两类快照 |
+ 
+ 唯一业务维度至少包含 `trade_date + snapshot_type + stock_code`。快照 ID 示例：
+ 
+ - `20260723_092605_auction_abcd1234`
+ - `20260723_093100_post_open_abcd1234`
++- `20260723_150100_close_abcd1234`
++
++
++`close` 中的竞价涨幅、竞价成交额、竞价匹配额等字段仍表示当天集合竞价指标；主力净额、主力买入、主力卖出额、当前价格和实时涨幅表示 15:01 采集时上游返回的状态。
+--- a/docs/KAIPANLA_SNAPSHOT_DEPLOYMENT.md
++++ b/docs/KAIPANLA_SNAPSHOT_DEPLOYMENT.md
+@@ -1,11 +1,12 @@
+-# 开盘啦双快照部署与验证
++# 开盘啦三时点快照部署与验证
+ 
+ ## 目标
+ 
+-每个交易日按上海时区保存两类互不覆盖的完整快照：
++每个交易日按上海时区保存三类互不覆盖的完整快照：
+ 
+ - `auction`：09:26:05
+ - `post_open`：09:31:00
++- `close`：15:01:00
+ 
+ 原始 JSON 和标准化 JSON 均压缩保存在 SQLite。数据库唯一索引、判重、快照 ID、任务租约和历史查询均包含 `snapshot_type`。
+ 
+@@ -20,6 +21,9 @@
+ KAIPANLA_POST_OPEN_SNAPSHOT_HOUR=9
+ KAIPANLA_POST_OPEN_SNAPSHOT_MINUTE=31
+ KAIPANLA_POST_OPEN_SNAPSHOT_SECOND=0
++KAIPANLA_CLOSE_SNAPSHOT_HOUR=15
++KAIPANLA_CLOSE_SNAPSHOT_MINUTE=1
++KAIPANLA_CLOSE_SNAPSHOT_SECOND=0
+ KAIPANLA_SNAPSHOT_WINDOW_SECONDS=120
+ KAIPANLA_SNAPSHOT_POLL_SECONDS=5
+ KAIPANLA_SNAPSHOT_PAGE_SIZE=1000
+@@ -63,9 +67,10 @@
+ ```text
+ GET /api/v1/market/kaipanla/morning_bidding/history?trade_date=20260723&snapshot_type=auction
+ GET /api/v1/market/kaipanla/morning_bidding/history?trade_date=20260723&snapshot_type=post_open
++GET /api/v1/market/kaipanla/morning_bidding/history?trade_date=20260723&snapshot_type=close
+ ```
+ 
+-不传 `snapshot_type` 时默认 `auction`。非法值返回 400。指定 `post_open` 但不存在时返回 404，不会用 `auction` 冒充命中。
++不传 `snapshot_type` 时默认 `auction`。非法值返回 400。指定 `post_open` 或 `close` 但不存在时返回 404，不会用 `auction` 或 Tushare 数据冒充命中。
+ 
+ ## SQLite 检查
+ 
+@@ -73,8 +78,20 @@
+ python -c "import sqlite3; c=sqlite3.connect(r'data\tokens.db'); print(c.execute('select trade_date,snapshot_type,count(*) from kaipanla_bidding_snapshots group by trade_date,snapshot_type order by trade_date desc,snapshot_type').fetchall())"
+ ```
+ 
+-验证同日两类快照 ID 和时间：
++验证同日三类快照 ID 和时间：
+ 
+ ```powershell
+ python -c "import sqlite3; c=sqlite3.connect(r'data\tokens.db'); print(c.execute('select snapshot_id,trade_date,snapshot_type,snapshot_time,record_count,data_quality,schema_version from kaipanla_bidding_snapshots order by snapshot_time desc limit 10').fetchall())"
+ ```
++
++## 飞书多维表格
++
++三类快照写入同一张竞价表。现有 `交易日期`、`快照时间`、`快照ID`、`快照类型` 字段可直接承载 `close`，无需新增列。若 `快照类型` 是单选字段，建议提前增加 `close` 选项。唯一键继续使用 `快照ID + 股票代码`，因此同一只股票每天保留三条记录。
++
++建议建立三个视图：
++
++- 集合竞价：`快照类型 = auction`
++- 开盘后：`快照类型 = post_open`
++- 收盘：`快照类型 = close`
++
++按 `交易日期`、`股票代码`、`快照时间` 排序可连续比较同一股票的三个时点。
+--- a/tests/test_feishu_bidding_sync_v2.py
++++ b/tests/test_feishu_bidding_sync_v2.py
+@@ -20,7 +20,8 @@
+     monkeypatch.setattr(sync_service,'get_bitable_manager',lambda: (_ for _ in ()).throw(AssertionError('must not write partial fallback')))
+     monkeypatch.setattr('services.kaipanla_bidding_service.get_kaipanla_bidding_service',lambda:Service())
+     result=sync_service.sync_bidding_to_feishu()
+-    assert {(x['trade_date'],x['snapshot_type']) for x in captured}=={('20260717','auction'),('20260717','post_open')}
++    assert {(x['trade_date'],x['snapshot_type']) for x in captured}=={('20260717','auction'),('20260717','post_open'),('20260717','close')}
++    assert {x['limit'] for x in captured}=={10000}
+     assert result.counts==(0,0) and result.status=='error'
+ 
+ 
+@@ -36,8 +37,8 @@
+     monkeypatch.setattr(sync_service,'get_bitable_manager',lambda:Bitable())
+     monkeypatch.setattr('services.kaipanla_bidding_service.get_kaipanla_bidding_service',lambda:Service())
+     result=sync_service.sync_bidding_to_feishu()
+-    assert result.counts==(2,0) and result.status=='ok'
+-    assert order==['schema',('write',2)]
++    assert result.counts==(3,0) and result.status=='ok'
++    assert order==['schema',('write',3)]
+ 
+ 
+ def test_process_lock_returns_busy_without_starting_second_sync(monkeypatch,tmp_path):
+@@ -48,3 +49,44 @@
+         assert acquired
+         result=sync_service.sync_bidding_to_feishu()
+         assert result.status=='busy' and result.counts==(0,0)
++
++
++def test_bidding_sync_writes_available_snapshots_and_reports_missing_close(monkeypatch):
++    _disable_runtime_guard(monkeypatch)
++    written=[]
++    class Service:
++        def query_history(self,params):
++            t=params['snapshot_type']
++            if t == 'close':
++                return SimpleNamespace(error='未找到指定条件的 close 历史快照',data=None,meta={'http_status':404,'snapshot_type':'close'})
++            return SimpleNamespace(
++                error=None,
++                data=pd.DataFrame([{'股票代码':'000001','snapshot_id':f'{t}-id','snapshot_type':t,'source_provider':'kaipanla','data_quality':'complete'}]),
++                meta={'source_provider':'kaipanla_snapshot','data_quality':'complete','fallback_used':False,'snapshot_type':t},
++            )
++    class Bitable:
++        def ensure_bidding_schema(self,create_missing=True): return {'ok':True}
++        def batch_add_bidding_records(self,rows): written.extend(rows); return len(rows),0
++    monkeypatch.setattr(sync_service,'get_bitable_manager',lambda:Bitable())
++    monkeypatch.setattr('services.kaipanla_bidding_service.get_kaipanla_bidding_service',lambda:Service())
++
++    result=sync_service.sync_bidding_to_feishu()
++
++    assert result.counts==(2,0) and result.status=='partial'
++    assert {row['snapshot_type'] for row in written}=={'auction','post_open'}
++    assert 'close: 未找到指定条件的 close 历史快照' in result.message
++
++
++def test_scheduled_bidding_sync_marks_day_complete_only_after_all_three_snapshots(monkeypatch):
++    monkeypatch.setattr(sync_service, '_china_now', lambda: datetime(2026,7,17,18,0,tzinfo=ZoneInfo('Asia/Shanghai')))
++    monkeypatch.setattr(sync_service.config, 'BIDDING_SYNC_HOUR', 18)
++    monkeypatch.setattr(sync_service.config, 'BIDDING_SYNC_MINUTE', 0)
++    monkeypatch.setattr(sync_service, '_last_bidding_sync_date', None)
++
++    monkeypatch.setattr(sync_service, 'sync_bidding_to_feishu', lambda: sync_service.SyncResult((2,0), status='partial', message='close missing'))
++    sync_service._check_and_sync_bidding()
++    assert sync_service._last_bidding_sync_date is None
++
++    monkeypatch.setattr(sync_service, 'sync_bidding_to_feishu', lambda: sync_service.SyncResult((3,0), status='ok', message='all snapshots'))
++    sync_service._check_and_sync_bidding()
++    assert sync_service._last_bidding_sync_date == '2026-07-17'
+--- a/tests/test_kaipanla_api_doc_contract.py
++++ b/tests/test_kaipanla_api_doc_contract.py
+@@ -6,12 +6,15 @@
+     return next(item for item in FULL_API_DOCS if item.get("provider") == "kaipanla" and item.get("api_name") == name)
+ 
+ 
+-def test_history_doc_describes_snapshot_type_enum_and_dual_snapshot_ids():
++def test_history_doc_describes_three_snapshot_types_and_ids():
+     doc = _doc("morning_bidding_history")
+     params = {item["name"]: item for item in doc["params"]}
+     assert params["snapshot_type"]["example"] == "auction"
+-    assert "auction 或 post_open" in params["snapshot_type"]["description"]
++    assert "auction、post_open 或 close" in params["snapshot_type"]["description"]
+     assert "snapshot_type=auction" in doc["request_example"]
++    assert "snapshot_type=close" in doc["request_example"]
++    assert "15:01:00" in doc["description"]
++    assert "close不存在时返回404" in doc["description"]
+     assert "_092605_auction_" in doc["response_example"]
+     assert '"snapshot_type": "auction"' in doc["response_example"]
+ 
+--- a/tests/test_kaipanla_dual_snapshot_repository.py
++++ b/tests/test_kaipanla_dual_snapshot_repository.py
+@@ -31,7 +31,8 @@
+     assert validate_snapshot_type(None) == "auction"
+     assert validate_snapshot_type("") == "auction"
+     assert validate_snapshot_type("post_open") == "post_open"
+-    with pytest.raises(ValueError, match="auction 或 post_open"):
++    assert validate_snapshot_type("close") == "close"
++    with pytest.raises(ValueError, match="auction、post_open 或 close"):
+         validate_snapshot_type("evening")
+ 
+ 
+--- a/tests/test_kaipanla_dual_snapshot_service.py
++++ b/tests/test_kaipanla_dual_snapshot_service.py
+@@ -35,7 +35,7 @@
+ 
+ def test_invalid_snapshot_type_returns_400(tmp_path):
+     result = KaipanlaBiddingService(repository=repo(tmp_path)).query_history({'snapshot_type':'later'})
+-    assert result.error == 'snapshot_type 只允许 auction 或 post_open'
++    assert result.error == 'snapshot_type 只允许 auction、post_open 或 close'
+     assert result.meta['http_status'] == 400
+ 
+ 
+--- /dev/null
++++ b/tests/test_kaipanla_triple_snapshot_repository.py
+@@ -0,0 +1,75 @@
++# -*- coding: utf-8 -*-
++from __future__ import annotations
++
++import sqlite3
++
++import pytest
++
++from services.kaipanla_snapshot_repository import (
++    KaipanlaSnapshotRepository,
++    SNAPSHOT_TYPES,
++    validate_snapshot_type,
++)
++
++
++def _repo(tmp_path):
++    path = tmp_path / "triple-snapshots.db"
++
++    def factory():
++        conn = sqlite3.connect(path, timeout=10, check_same_thread=False)
++        conn.row_factory = sqlite3.Row
++        return conn
++
++    return KaipanlaSnapshotRepository(factory)
++
++
++def _row(value: int) -> dict:
++    return {"股票代码": "000001", "auction_net_amount": value}
++
++
++def test_snapshot_type_contract_accepts_close_and_rejects_unknown_values():
++    assert SNAPSHOT_TYPES == ("auction", "post_open", "close")
++    assert validate_snapshot_type(None) == "auction"
++    assert validate_snapshot_type("close") == "close"
++    with pytest.raises(ValueError, match="auction、post_open 或 close"):
++        validate_snapshot_type("evening")
++
++
++def test_same_trade_date_stores_three_independent_snapshot_types(tmp_path):
++    repo = _repo(tmp_path)
++    saved = {
++        "auction": repo.save_snapshot(
++            trade_date="20260724",
++            snapshot_time="2026-07-24 09:26:05",
++            snapshot_type="auction",
++            source_params={},
++            raw_payload=[_row(1)],
++            normalized_data=[_row(1)],
++        ),
++        "post_open": repo.save_snapshot(
++            trade_date="20260724",
++            snapshot_time="2026-07-24 09:31:00",
++            snapshot_type="post_open",
++            source_params={},
++            raw_payload=[_row(2)],
++            normalized_data=[_row(2)],
++        ),
++        "close": repo.save_snapshot(
++            trade_date="20260724",
++            snapshot_time="2026-07-24 15:01:00",
++            snapshot_type="close",
++            source_params={},
++            raw_payload=[_row(3)],
++            normalized_data=[_row(3)],
++        ),
++    }
++
++    ids = {item.snapshot.snapshot_id for item in saved.values()}
++    assert len(ids) == 3
++    for snapshot_type, item in saved.items():
++        assert item.created is True
++        assert item.snapshot.snapshot_type == snapshot_type
++        assert f"_{snapshot_type}_" in item.snapshot.snapshot_id
++        loaded = repo.get_snapshot("20260724", snapshot_type)
++        assert loaded is not None
++        assert loaded.snapshot_id == item.snapshot.snapshot_id
+--- /dev/null
++++ b/tests/test_kaipanla_triple_snapshot_service.py
+@@ -0,0 +1,97 @@
++# -*- coding: utf-8 -*-
++from __future__ import annotations
++
++import sqlite3
++
++from integrations.market_data.base import ProviderResponse
++from services.kaipanla_bidding_service import KaipanlaBiddingService
++from services.kaipanla_snapshot_repository import KaipanlaSnapshotRepository
++
++
++def _repo(tmp_path):
++    path = tmp_path / "triple-service.db"
++
++    def factory():
++        conn = sqlite3.connect(path, check_same_thread=False)
++        conn.row_factory = sqlite3.Row
++        return conn
++
++    return KaipanlaSnapshotRepository(factory)
++
++
++def _rows(label: str):
++    return [
++        {
++            "股票代码": "000001",
++            "ts_code": "000001.SZ",
++            "股票名称": label,
++            "schema_version": "kaipanla_bidding.v2",
++        }
++    ]
++
++
++def test_history_can_select_close_snapshot(tmp_path):
++    repo = _repo(tmp_path)
++    saved = repo.save_snapshot(
++        trade_date="20260724",
++        snapshot_time="2026-07-24 15:01:00",
++        snapshot_type="close",
++        source_params={},
++        raw_payload={"close": 1},
++        normalized_data=_rows("close"),
++    )
++    service = KaipanlaBiddingService(repository=repo)
++
++    result = service.query_history(
++        {"trade_date": "20260724", "snapshot_type": "close"}
++    )
++
++    assert result.error is None
++    assert result.meta["snapshot_id"] == saved.snapshot.snapshot_id
++    assert result.meta["snapshot_type"] == "close"
++    assert result.meta["fallback_used"] is False
++
++
++def test_missing_close_never_falls_back_to_auction_or_tushare(tmp_path):
++    repo = _repo(tmp_path)
++    repo.save_snapshot(
++        trade_date="20260724",
++        snapshot_time="2026-07-24 09:26:05",
++        snapshot_type="auction",
++        source_params={},
++        raw_payload={},
++        normalized_data=_rows("auction"),
++    )
++
++    def forbidden_query(*args, **kwargs):
++        raise AssertionError("close snapshot must not use Tushare fallback")
++
++    service = KaipanlaBiddingService(repository=repo, market_query=forbidden_query)
++    result = service.query_history(
++        {"trade_date": "20260724", "snapshot_type": "close"}
++    )
++
++    assert result.error == "未找到指定条件的 close 历史快照"
++    assert result.meta["http_status"] == 404
++    assert result.meta["snapshot_type"] == "close"
++    assert result.meta["fallback_used"] is False
++
++
++def test_close_snapshot_id_must_match_requested_type(tmp_path):
++    repo = _repo(tmp_path)
++    saved = repo.save_snapshot(
++        trade_date="20260724",
++        snapshot_time="2026-07-24 15:01:00",
++        snapshot_type="close",
++        source_params={},
++        raw_payload={},
++        normalized_data=_rows("close"),
++    )
++    service = KaipanlaBiddingService(repository=repo)
++
++    result = service.query_history(
++        {"snapshot_id": saved.snapshot.snapshot_id, "snapshot_type": "auction"}
++    )
++
++    assert result.error == "snapshot_id 与 snapshot_type 不一致"
++    assert result.meta["http_status"] == 400
+--- /dev/null
++++ b/tests/test_kaipanla_triple_snapshot_scheduler.py
+@@ -0,0 +1,151 @@
++# -*- coding: utf-8 -*-
++from __future__ import annotations
++
++from datetime import datetime
++from zoneinfo import ZoneInfo
++
++from integrations.market_data.base import ProviderResponse
++from services.kaipanla_snapshot_scheduler import (
++    KaipanlaSnapshotScheduler,
++    SnapshotSchedulerSettings,
++)
++
++
++class Repo:
++    def __init__(self):
++        self.types: set[str] = set()
++        self.leases: list[str] = []
++
++    def has_snapshot(self, trade_date, snapshot_type="auction"):
++        return snapshot_type in self.types
++
++    def acquire_lease(self, name, owner, ttl, now=None):
++        self.leases.append(name)
++        return True
++
++    def release_lease(self, name, owner):
++        return None
++
++    def prune_before(self, cutoff):
++        return 0
++
++
++class Service:
++    def __init__(self, repo, market_status="open"):
++        self.repository = repo
++        self.market_status = market_status
++        self.calls: list[dict] = []
++
++    def get_open_date_status(self, trade_date):
++        return self.market_status
++
++    def capture_snapshot(self, **kwargs):
++        self.calls.append(dict(kwargs))
++        self.repository.types.add(kwargs["snapshot_type"])
++        return ProviderResponse(
++            data=[],
++            meta={
++                "snapshot_id": f"{kwargs['snapshot_type']}-id",
++                "snapshot_created": True,
++                "record_count": 1,
++                "snapshot_type": kwargs["snapshot_type"],
++            },
++        )
++
++
++def _settings():
++    return SnapshotSchedulerSettings(
++        enabled=True,
++        auction_hour=9,
++        auction_minute=26,
++        auction_second=5,
++        post_open_hour=9,
++        post_open_minute=31,
++        post_open_second=0,
++        close_hour=15,
++        close_minute=1,
++        close_second=0,
++        window_seconds=120,
++        poll_seconds=5,
++        page_size=1000,
++        max_pages=10,
++        lease_seconds=300,
++        retention_days=1095,
++    )
++
++
++def test_scheduler_captures_all_three_types_in_independent_windows_and_leases():
++    tz = ZoneInfo("Asia/Shanghai")
++    repo = Repo()
++    service = Service(repo)
++    scheduler = KaipanlaSnapshotScheduler(
++        service=service,
++        repository=repo,
++        settings=_settings(),
++        owner_id="worker",
++    )
++
++    results = [
++        scheduler.run_once(now=datetime(2026, 7, 24, 9, 26, 5, tzinfo=tz)),
++        scheduler.run_once(now=datetime(2026, 7, 24, 9, 31, 0, tzinfo=tz)),
++        scheduler.run_once(now=datetime(2026, 7, 24, 15, 1, 0, tzinfo=tz)),
++    ]
++
++    assert [item["snapshot_type"] for item in results] == [
++        "auction",
++        "post_open",
++        "close",
++    ]
++    assert [call["snapshot_type"] for call in service.calls] == [
++        "auction",
++        "post_open",
++        "close",
++    ]
++    assert repo.leases == [
++        "kaipanla_morning_bidding:20260724:auction",
++        "kaipanla_morning_bidding:20260724:post_open",
++        "kaipanla_morning_bidding:20260724:close",
++    ]
++
++
++def test_scheduler_does_not_capture_close_twice():
++    tz = ZoneInfo("Asia/Shanghai")
++    repo = Repo()
++    repo.types.add("close")
++    service = Service(repo)
++    scheduler = KaipanlaSnapshotScheduler(
++        service=service,
++        repository=repo,
++        settings=_settings(),
++        owner_id="worker",
++    )
++
++    result = scheduler.run_once(now=datetime(2026, 7, 24, 15, 1, 30, tzinfo=tz))
++
++    assert result == {
++        "status": "already_captured",
++        "trade_date": "20260724",
++        "snapshot_type": "close",
++    }
++    assert service.calls == []
++
++
++def test_scheduler_skips_close_on_non_trading_day():
++    tz = ZoneInfo("Asia/Shanghai")
++    repo = Repo()
++    service = Service(repo, market_status="closed")
++    scheduler = KaipanlaSnapshotScheduler(
++        service=service,
++        repository=repo,
++        settings=_settings(),
++        owner_id="worker",
++    )
++
++    result = scheduler.run_once(now=datetime(2026, 7, 25, 15, 1, 0, tzinfo=tz))
++
++    assert result == {
++        "status": "market_closed",
++        "trade_date": "20260725",
++        "snapshot_type": "close",
++    }
++    assert service.calls == []

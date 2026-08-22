@@ -1,0 +1,13 @@
+/* migrated from routes/admin_user_routes.py:180 */
+.user-center-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+      .user-center-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);gap:18px;align-items:start}
+      .card{background:#fff;border:1px solid #dbe3ee;border-radius:12px;padding:18px;margin-bottom:18px;box-shadow:0 1px 4px rgba(16,24,40,.05)}
+      .card h2{margin-top:0} .form-grid{display:grid;grid-template-columns:150px minmax(260px,1fr);gap:12px 14px;align-items:center}
+      .form-grid input,.form-grid select{width:100%;min-width:0} .readonly{padding:8px 10px;background:#f2f4f7;border-radius:6px}
+      .notice{padding:11px 14px;border-radius:8px;background:#fff;margin:0 0 16px;border:1px solid #d0d5dd}
+      .notice.ok{background:#ecfdf3;border-color:#abefc6} .notice.warning{background:#fffaeb;border-color:#fedf89;color:#7a2e0e} .notice.error{background:#fef3f2;border-color:#fecdca}
+      .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px} .summary-box{padding:12px;background:#f8fafc;border-radius:8px;text-align:center}
+      .history-table{width:100%;font-size:13px} .history-wrap{overflow:auto;max-height:430px} .ua-cell{max-width:320px;white-space:normal;word-break:break-word}
+      .button-danger{background:#b42318;color:#fff;border:0;border-radius:6px} .button-enable{background:#067647;color:#fff;border:0;border-radius:6px}
+      .actions-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px} code{font-size:12px}
+      @media(max-width:900px){.user-center-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}}

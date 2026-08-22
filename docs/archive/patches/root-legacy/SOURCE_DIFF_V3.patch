@@ -1,0 +1,1939 @@
+--- a/.env.example
++++ b/.env.example
+@@ -103,6 +103,10 @@
+ BIDDING_SYNC_HOUR=18
+ BIDDING_SYNC_MINUTE=0
+ BIDDING_SYNC_COUNT=200
++# 自动创建缺失的竞价字段；遇到已有字段类型不兼容时会停止同步，不会直接改坏旧字段。
++FEISHU_BIDDING_AUTO_CREATE_FIELDS=true
++# 默认禁止将 Tushare partial 降级结果写入开盘啦竞价表。
++FEISHU_BIDDING_ALLOW_TUSHARE_FALLBACK=false
+ FEISHU_SYNC_INTERVAL_MINUTES=5
+ 
+ # ==================== Kaipanla (optional, only for bidding sync) ====================
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,4 +1,15 @@
+ # Changelog
++
++## Kaipanla Production Hardening Patch V3 — 2026-07-19
++
++- 拒绝保存空快照或缺少有效股票代码的快照。
++- 实时接口只在上海时间集合竞价窗口且交易日确认后标注交易日期，窗口外明确为 `unverified_realtime`。
++- 交易日判断增加 `open/closed/unknown` 三态，交易日历故障不再误报为休市。
++- Tushare 降级先解析不晚于请求日期的最近交易日，并返回 `fallback_reason`、`warning` 和 `tushare_historical_fallback`。
++- Repository 改为按 `trade_date + SHA-256` 去重；同日不同 payload 可作为不可变审计快照保留，日期查询仍返回最早 canonical 快照。
++- 飞书同步增加在线字段读取、缺失字段兼容新增、类型冲突阻断和独立检查工具。
++- 飞书竞价同步统一使用上海时区，默认禁止把 Tushare partial 降级结果写入开盘啦表。
++- 合并新旧测试合同，完整回归测试不再同时要求 V1 错误字段语义与 V2 无损语义。
+ 
+ ## Kaipanla Snapshot Production Patch V2 — 2026-07-19
+ 
+--- a/config.py
++++ b/config.py
+@@ -249,6 +249,10 @@
+ BIDDING_SYNC_HOUR = _get_int("BIDDING_SYNC_HOUR", 18, 0, 23)
+ BIDDING_SYNC_MINUTE = _get_int("BIDDING_SYNC_MINUTE", 0, 0, 59)
+ BIDDING_SYNC_COUNT = _get_int("BIDDING_SYNC_COUNT", 200, 1, 10000)
++# Add only missing bidding fields; never mutate incompatible existing field types.
++FEISHU_BIDDING_AUTO_CREATE_FIELDS = _get_bool("FEISHU_BIDDING_AUTO_CREATE_FIELDS", True)
++# Disabled by default: a Tushare partial fallback must not silently enter the Kaipanla table.
++FEISHU_BIDDING_ALLOW_TUSHARE_FALLBACK = _get_bool("FEISHU_BIDDING_ALLOW_TUSHARE_FALLBACK", False)
+ FEISHU_SYNC_INTERVAL_MINUTES = _get_int("FEISHU_SYNC_INTERVAL_MINUTES", 5, 1, 1440)
+ 
+ # Kaipanla (optional, used only by Feishu bidding sync)
+--- a/docs/FEISHU_KAIPANLA_FIELD_MAPPING_V2.md
++++ b/docs/FEISHU_KAIPANLA_FIELD_MAPPING_V2.md
+@@ -59,6 +59,7 @@
+ | 数据质量 | 文本/单选 | `data_quality` | 是 | `complete`/`partial` |
+ | Schema版本 | 文本 | `schema_version` | 是 | `kaipanla_bidding.v2` |
+ | 主力资金关系校验 | 复选框/布尔 | `main_amount_relation_valid` | 否 | Tushare 降级可为空 |
++| 字段校验警告 | 文本 | `field_validation_warning` | 否 | 关系失败时保留原因 |
+ | 名称来源 | 文本/单选 | `name_source` | 否 | `kaipanla`/`bak_basic`/`stock_basic` |
+ | 行业 | 文本 | `stock_basic_industry` | 否 | Tushare 当前行业，不写入板块 |
+ | 历史行业 | 文本 | `bak_basic_industry` | 否 | Tushare 历史行业 |
+@@ -81,20 +82,21 @@
+ - 板块和连板按文本同步；
+ - 布尔校验按布尔值同步。
+ 
+-`services/feishu_sync_service.py::sync_bidding_to_feishu` 已改为读取历史快照，不在晚间重拉实时开盘啦数据。
++`services/feishu_sync_service.py::sync_bidding_to_feishu` 已改为读取历史快照，不在晚间重拉实时开盘啦数据，并在写入前执行在线字段检查。`integrations/feishu/bitable.py::ensure_bidding_schema` 只新增缺失字段，不删除、不重命名、不强改已有字段类型；发现类型冲突时停止同步并输出字段名。
+ 
+ ## 5. 迁移步骤
+ 
+ 1. 备份当前 Base 或复制“数据表”。
+-2. 在现有表中新增上述字段；不要删除 15 个旧字段。
+-3. 金额字段先用数字类型；字段15和主力卖出必须允许负数。
+-4. 使用测试账号写入一条 `000001`，确认前导零保留。
+-5. 写入一条字段15为负数的记录，确认负数与正数“主力卖出额”同时正确。
+-6. 启用 V2 同步并检查旧记录仍可读取。
+-7. 可在普通视图隐藏原始字段10/13/14/15，但不得删除。
++2. 运行 `python tools/check_feishu_bidding_schema.py` 只读检查在线字段。
++3. 运行 `python tools/check_feishu_bidding_schema.py --apply` 仅新增缺失字段；不要删除 15 个旧字段。
++4. 若报告存在类型冲突，创建兼容新字段或人工迁移，代码不会直接改坏旧字段。
++5. 使用测试账号写入一条 `000001`，确认前导零保留。
++6. 写入一条字段15为负数的记录，确认负数与正数“主力卖出额”同时正确。
++7. 启用 V2 同步并检查旧记录仍可读取。
++8. 可在普通视图隐藏原始字段10/13/14/15，但不得删除。
+ 
+ ## 6. 已发现的兼容风险
+ 
+-- 当前离线 `.base` 不含任何 V2 新字段；若直接部署新同步代码但未先新增字段，飞书 API 可能因未知字段拒绝整条记录。
++- 当前离线 `.base` 不含任何 V2 新字段；新代码会在同步前检查，并可按配置自动新增缺失字段。若在线表字段类型不兼容，同步会停止而不是发送一条必然失败的记录。
+ - 当前“导入日期/导出时间点”继续保留；V2 新增“交易日期/快照时间”用于数据口径与批次审计，两套字段并存。
+ - 飞书在线表是否与上传 `.base` 完全一致，必须在真实 App Token/Table ID 下再次读取验证；本补丁未使用用户真实凭据执行线上写入。
+--- a/docs/KAIPANLA_SNAPSHOT_DEPLOYMENT.md
++++ b/docs/KAIPANLA_SNAPSHOT_DEPLOYMENT.md
+@@ -59,9 +59,10 @@
+ 4. 获取数据库租约；
+ 5. 自动探测开盘啦分页模式并全量翻页；
+ 6. 保存 raw payload 与 V2 normalized payload；
+-7. 同交易日已有快照时直接返回首个快照，不写入晚间数据；
+-8. 清理超过保留期的数据；
+-9. 释放租约。
++7. 空结果或缺少有效股票代码时拒绝保存，不生成 `complete` 空快照；
++8. 调度器发现同交易日已有快照时不再采集，避免晚间数据覆盖 09:25 口径；
++9. Repository 按 `trade_date + payload_hash` 去重，允许保留同日其他不可变审计快照，日期查询始终选择最早的 canonical 快照；
++10. 清理超过保留期的数据并释放租约。
+ 
+ ## 6. API
+ 
+@@ -69,7 +70,7 @@
+ 
+ `GET /api/v1/market/kaipanla/morning_bidding`
+ 
+-实时响应同样使用 V2 Adapter，保留原始 `10/13/14/15`。
++实时响应同样使用 V2 Adapter，保留原始 `10/13/14/15`。只有上海时间 09:15—09:30 且交易日历确认开市时才标注 `actual_trade_date`；窗口外返回 `data_freshness=unverified_realtime`，不会把晚间数据误标为当日竞价快照。
+ 
+ ### 历史日期
+ 
+@@ -120,11 +121,30 @@
+ 
+ ## 8. 飞书同步
+ 
+-晚间飞书同步已改为读取不可变历史快照，不再重新调用晚间实时竞价接口。先按 `FEISHU_KAIPANLA_FIELD_MAPPING_V2.md` 在目标表新增兼容字段；未新增的字段会导致飞书 API 拒绝整条记录，因此上线前必须完成字段配置。
++晚间飞书同步读取不可变历史快照，不再重新调用晚间实时竞价接口。同步前会读取真实在线表字段：
++
++- 缺失字段可通过 `FEISHU_BIDDING_AUTO_CREATE_FIELDS=true` 兼容新增；
++- 已有字段类型不兼容时立即停止同步，不会直接修改或删除旧字段；
++- 默认拒绝把 Tushare `partial` 降级数据静默写入开盘啦表；只有显式设置 `FEISHU_BIDDING_ALLOW_TUSHARE_FALLBACK=true` 才允许；
++- 所有竞价同步时间按 `Asia/Shanghai` 计算。
++
++可先只读检查：
++
++```bash
++python tools/check_feishu_bidding_schema.py
++```
++
++确认后新增缺失字段：
++
++```bash
++python tools/check_feishu_bidding_schema.py --apply
++```
++
++Windows 也可以运行 `check_feishu_bidding_schema.bat --apply`。
+ 
+ ## 9. 运维检查
+ 
+-- 检查日志中每天只出现一次 `captured`；
++- 检查日志中每天只出现一次 `captured`；交易日历异常应记录为 `calendar_error`，不能误报为休市；
+ - 用日期接口确认 `snapshot_time` 接近 09:25；
+ - 用相同 `snapshot_id` 查询 TOP5 与单股详情；
+ - 检查 `payload_hash` 长度为 64；
+--- a/docs/RELEASE_SECURITY_CLEANUP.md
++++ b/docs/RELEASE_SECURITY_CLEANUP.md
+@@ -0,0 +1,21 @@
++# 发布包安全清理说明
++
++本补丁 ZIP 只包含需要替换的源码、测试和文档，不包含真实凭据或运行数据。
++
++制作完整源码发布包时必须排除：
++
++- `.env`、`.env_before_https` 和任何真实 Token/密码文件；
++- `data/*.db`、SQLite WAL/SHM 文件；
++- `logs/` 下的运行日志；
++- `.venv/`、`venv/`、`.idea/`；
++- `__pycache__/`、`.pytest_cache/`、`*.pyc`；
++- 临时导出 CSV、真实上游 payload 和调试抓包。
++
++注意：生产服务器运行所需的 `.env` 和数据库不能被清理脚本自动删除。应只从“对外分发的 ZIP/源码副本”中排除，并在服务器上通过安全方式保留。此前已经进入共享 ZIP 的 Token 应进行轮换。
++
++以下文件没有当前运行引用，可从源码发布副本中人工移除，但不要由补丁自动删除：
++
++- `app_before_https.py`；
++- `.env_before_https`；
++- `integrations/market_data/miniqmt/subscription_manager.py`（仅在确认近期不启用 MiniQMT 实时订阅时）；
++- 历史补丁说明、重复文件树和旧测试报告。
+--- a/routes/market_data_routes.py
++++ b/routes/market_data_routes.py
+@@ -100,7 +100,24 @@
+         "data_freshness": result.meta.get("data_freshness"),
+         "fallback_attempt_count": result.meta.get("fallback_attempt_count", 0),
+     }
+-    if fallback_used and actual_trade_date:
++    source_provider = str(result.meta.get("source_provider") or "")
++    is_kaipanla_history = (
++        provider_code == "kaipanla"
++        and data_type.strip().lower().replace("-", "_").replace("/", "_")
++        in {"morning_bidding_history", "bidding_history"}
++    )
++    if is_kaipanla_history and source_provider == "tushare":
++        warning = result.meta.get("warning") or "开盘啦特有竞价字段无法还原"
++        msg = f"获取成功，共{len(records)}条；已降级为 Tushare 部分数据；{warning}"
++    elif is_kaipanla_history and source_provider == "kaipanla_snapshot":
++        if fallback_used and actual_trade_date:
++            msg = (
++                f"获取成功，共{len(records)}条；未找到指定日期的开盘啦历史快照，"
++                f"已返回不晚于{requested_trade_date}的最近快照（{actual_trade_date}）"
++            )
++        else:
++            msg = f"获取成功，共{len(records)}条；已返回开盘啦历史快照"
++    elif fallback_used and actual_trade_date:
+         msg = (
+             f"获取成功，共{len(records)}条；请求日期{requested_trade_date or '当前日期'}"
+             f"尚未发布，已返回最近可用日期{actual_trade_date}的数据"
+--- a/services/feishu_sync_service.py
++++ b/services/feishu_sync_service.py
+@@ -17,6 +17,7 @@
+ import time
+ from datetime import datetime
+ from typing import Any, Optional
++from zoneinfo import ZoneInfo
+ 
+ import config
+ from db_utils import get_conn, init_db, refresh_subscription_states
+@@ -28,6 +29,11 @@
+ _sync_running = False
+ _sync_thread = None
+ _last_bidding_sync_date = None
++_SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
++
++
++def _china_now() -> datetime:
++    return datetime.now(_SHANGHAI_TZ)
+ 
+ 
+ # ==================== 通用转换工具 ====================
+@@ -666,8 +672,8 @@
+ 
+ 
+ # ==================== 竞价数据同步 ====================
+-def sync_bidding_to_feishu():
+-    """同步早盘竞价数据到飞书竞价表。"""
++def sync_bidding_to_feishu() -> tuple[int, int]:
++    """Sync the immutable Kaipanla snapshot to Feishu after schema validation."""
+     try:
+         logging.info("=" * 60)
+         logging.info("[竞价同步] 开始同步早盘竞价数据到飞书")
+@@ -676,24 +682,37 @@
+         from services.kaipanla_bidding_service import get_kaipanla_bidding_service
+         from utils.common import df_to_list
+ 
+-        # 晚间/延迟同步必须读取09:25后保存的不可变快照，不能重新请求实时接口覆盖早盘口径。
+-        trade_date = datetime.now().strftime("%Y%m%d")
++        # 晚间/延迟同步只读取09:25后保存的不可变快照。
++        now = _china_now()
++        trade_date = now.strftime("%Y%m%d")
+         result = get_kaipanla_bidding_service().query_history({
+             "trade_date": trade_date,
+             "limit": config.BIDDING_SYNC_COUNT,
+         })
+         if result.error:
+             logging.error("[竞价同步] 获取竞价快照失败: %s", result.error)
+-            return
++            return 0, 0
++
++        source_provider = str((result.meta or {}).get("source_provider") or "")
++        data_quality = str((result.meta or {}).get("data_quality") or "")
++        fallback_used = bool((result.meta or {}).get("fallback_used"))
++        allow_partial = bool(getattr(config, "FEISHU_BIDDING_ALLOW_TUSHARE_FALLBACK", False))
++        if (source_provider == "tushare" or data_quality != "complete" or fallback_used) and not allow_partial:
++            logging.error(
++                "[竞价同步] 拒绝写入非完整开盘啦快照: source=%s quality=%s fallback=%s",
++                source_provider,
++                data_quality,
++                fallback_used,
++            )
++            return 0, 0
++
+         df = result.data
+         if df is None or df.empty:
+             logging.warning("[竞价同步] 竞价快照为空，不同步")
+-            return
++            return 0, 0
+ 
+         data_list = df_to_list(df)
+         logging.info("[竞价同步] 获取到 %d 条竞价数据", len(data_list))
+-
+-        now = datetime.now()
+         import_date = now.strftime("%Y-%m-%d")
+         export_time = now.strftime("%Y-%m-%d %H:%M:%S")
+         for item in data_list:
+@@ -701,18 +720,21 @@
+             item["导出时间点"] = export_time
+ 
+         bitable = get_bitable_manager()
++        bitable.ensure_bidding_schema(
++            create_missing=bool(getattr(config, "FEISHU_BIDDING_AUTO_CREATE_FIELDS", True))
++        )
+         success_count, fail_count = bitable.batch_add_bidding_records(data_list)
+         logging.info("[竞价同步] 写入完成：成功 %d 条，失败 %d 条", success_count, fail_count)
+         logging.info("=" * 60)
+-
+-    except Exception as e:
+-        logging.exception("[竞价同步] 同步异常: %s", e)
+-
++        return success_count, fail_count
++    except Exception as exc:
++        logging.exception("[竞价同步] 同步异常: %s", exc)
++        return 0, 0
+ 
+ def _check_and_sync_bidding():
+     """检查是否到了每日竞价同步时间。"""
+     global _last_bidding_sync_date
+-    now = datetime.now()
++    now = _china_now()
+     today_str = now.strftime("%Y-%m-%d")
+     if _last_bidding_sync_date == today_str:
+         return
+@@ -721,8 +743,9 @@
+     sync_minute = config.BIDDING_SYNC_MINUTE
+     if now.hour == sync_hour and now.minute >= sync_minute:
+         logging.info("[竞价同步] 到达同步时间 %s:%02d，开始同步", sync_hour, sync_minute)
+-        sync_bidding_to_feishu()
+-        _last_bidding_sync_date = today_str
++        success_count, _fail_count = sync_bidding_to_feishu()
++        if success_count > 0:
++            _last_bidding_sync_date = today_str
+ 
+ 
+ # ==================== 同步服务线程 ====================
+--- a/services/kaipanla_bidding_service.py
++++ b/services/kaipanla_bidding_service.py
+@@ -1,10 +1,10 @@
+ # -*- coding: utf-8 -*-
+-"""Business orchestration for live, immutable snapshots, and Tushare fallback."""
++"""Business orchestration for live Kaipanla data, immutable snapshots and fallback."""
+ from __future__ import annotations
+ 
+ import logging
+ import re
+-from datetime import datetime
++from datetime import datetime, timedelta, time as clock_time
+ from typing import Any, Callable
+ from zoneinfo import ZoneInfo
+ 
+@@ -13,152 +13,405 @@
+ from integrations.market_data.base import ProviderResponse
+ from integrations.market_data.kaipanla.adapter import normalize_kaipanla_bidding
+ from integrations.market_data.kaipanla.client import KaipanlaClient
++from integrations.market_data.kaipanla.schema import SCHEMA_VERSION
+ from services.kaipanla_snapshot_repository import KaipanlaSnapshotRepository
+ 
+ _SHANGHAI = ZoneInfo("Asia/Shanghai")
+ _DATE_RE = re.compile(r"^\d{8}$")
+ _SNAPSHOT_RE = re.compile(r"^\d{8}_\d{6}_[0-9a-f]{12}$")
+-
+-
+-def _default_market_query(provider: str, api_name: str, params: dict[str,Any], **kwargs: Any):
++_AUCTION_WINDOW_START = clock_time(9, 15, 0)
++_AUCTION_WINDOW_END = clock_time(9, 30, 0)
++_FALLBACK_WARNING = "未找到开盘啦历史快照，已降级为 Tushare 部分数据；开盘啦特有竞价字段无法还原"
++
++
++def _default_market_query(provider: str, api_name: str, params: dict[str, Any], **kwargs: Any):
+     from services.market_data_service import query_market_data
+     return query_market_data(provider, api_name, params, **kwargs)
+ 
+ 
+-def _now() -> datetime: return datetime.now(_SHANGHAI)
++def _now() -> datetime:
++    return datetime.now(_SHANGHAI)
++
++
++def _as_shanghai(value: datetime) -> datetime:
++    return value.replace(tzinfo=_SHANGHAI) if value.tzinfo is None else value.astimezone(_SHANGHAI)
+ 
+ 
+ class KaipanlaBiddingService:
+-    def __init__(self, *, repository: KaipanlaSnapshotRepository | None=None, client: KaipanlaClient | None=None,
+-                 market_query: Callable[...,Any] | None=None, china_now: Callable[[],datetime] | None=None) -> None:
+-        self.repository=repository or KaipanlaSnapshotRepository()
+-        self.client=client or KaipanlaClient()
+-        self.market_query=market_query or _default_market_query
+-        self.china_now=china_now or _now
++    def __init__(
++        self,
++        *,
++        repository: KaipanlaSnapshotRepository | None = None,
++        client: KaipanlaClient | None = None,
++        market_query: Callable[..., Any] | None = None,
++        china_now: Callable[[], datetime] | None = None,
++        china_today: Callable[[], str] | None = None,
++    ) -> None:
++        self.repository = repository or KaipanlaSnapshotRepository()
++        self.client = client or KaipanlaClient()
++        self.market_query = market_query or _default_market_query
++        self.china_now = china_now or _now
++        self.china_today = china_today
+ 
+     @staticmethod
+-    def _validate_date(value: Any, required: bool=True) -> str | None:
+-        text=str(value or "").strip()
+-        if not text and not required: return None
+-        if not _DATE_RE.fullmatch(text): raise ValueError("trade_date 必须为 YYYYMMDD")
+-        datetime.strptime(text,"%Y%m%d")
++    def _validate_date(value: Any, required: bool = True) -> str | None:
++        text = str(value or "").strip()
++        if not text and not required:
++            return None
++        if not _DATE_RE.fullmatch(text):
++            raise ValueError("trade_date 必须为 YYYYMMDD")
++        datetime.strptime(text, "%Y%m%d")
+         return text
+ 
+-    def _query_tushare(self, api: str, params: dict[str,Any]):
+-        try: return self.market_query("tushare", api, params)
++    def _today(self) -> str:
++        if self.china_today is not None:
++            return self._validate_date(self.china_today()) or ""
++        return _as_shanghai(self.china_now()).strftime("%Y%m%d")
++
++    def _query_tushare(self, api: str, params: dict[str, Any]):
++        try:
++            return self.market_query("tushare", api, params)
+         except Exception as exc:
+-            logging.warning("[开盘啦竞价] Tushare %s 查询异常: %s",api,exc)
++            logging.warning("[开盘啦竞价] Tushare %s 查询异常: %s", api, exc)
+             return ProviderResponse(error=str(exc))
+ 
++    def get_open_date_status(self, trade_date: str) -> str:
++        """Return ``open``, ``closed`` or ``unknown`` without hiding calendar failures."""
++        date = self._validate_date(trade_date)
++        result = self._query_tushare(
++            "trade_cal",
++            {"exchange": "SSE", "start_date": date, "end_date": date, "fields": "cal_date,is_open"},
++        )
++        if result.error or result.data is None or result.data.empty or "is_open" not in result.data.columns:
++            return "unknown"
++        value = pd.to_numeric(result.data["is_open"], errors="coerce")
++        if value.notna().sum() == 0:
++            return "unknown"
++        return "open" if bool(value.fillna(0).max() == 1) else "closed"
++
+     def is_open_date(self, trade_date: str) -> bool:
+-        date=self._validate_date(trade_date)
+-        result=self._query_tushare("trade_cal",{"exchange":"SSE","start_date":date,"end_date":date,"fields":"cal_date,is_open"})
+-        if result.error or result.data is None or result.data.empty or "is_open" not in result.data.columns: return False
+-        return bool(pd.to_numeric(result.data["is_open"],errors="coerce").fillna(0).max()==1)
+-
+-    def _reference_frames(self, trade_date: str | None, *, historical: bool) -> tuple[pd.DataFrame,pd.DataFrame,pd.DataFrame,pd.DataFrame]:
+-        stock=self._query_tushare("stock_basic",{"list_status":"L","fields":"ts_code,symbol,name,industry,market,exchange,list_status"})
+-        stock_df=pd.DataFrame() if stock.error else stock.data
+-        bak_df=pd.DataFrame()
++        return self.get_open_date_status(trade_date) == "open"
++
++    def _resolve_latest_open_date(self, on_or_before: str) -> tuple[str | None, str | None]:
++        bound = self._validate_date(on_or_before)
++        end = datetime.strptime(bound, "%Y%m%d")
++        start = (end - timedelta(days=45)).strftime("%Y%m%d")
++        result = self._query_tushare(
++            "trade_cal",
++            {"exchange": "SSE", "start_date": start, "end_date": bound, "fields": "cal_date,is_open"},
++        )
++        if result.error:
++            return None, result.error
++        frame = result.data if isinstance(result.data, pd.DataFrame) else pd.DataFrame(result.data)
++        if frame.empty or not {"cal_date", "is_open"}.issubset(frame.columns):
++            return None, "交易日历未返回可验证数据"
++        dates = frame.copy()
++        dates["cal_date"] = dates["cal_date"].astype(str).str.replace(r"\D", "", regex=True)
++        dates["is_open"] = pd.to_numeric(dates["is_open"], errors="coerce")
++        dates = dates[(dates["cal_date"] <= bound) & (dates["is_open"] == 1)]
++        if dates.empty:
++            return None, f"{bound} 之前未找到可用交易日"
++        return str(dates["cal_date"].max()), None
++
++    def _reference_frames(
++        self, trade_date: str | None, *, historical: bool
++    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
++        stock = self._query_tushare(
++            "stock_basic",
++            {"list_status": "L", "fields": "ts_code,symbol,name,industry,market,exchange,list_status"},
++        )
++        stock_df = pd.DataFrame() if stock.error else stock.data
++        bak_df = pd.DataFrame()
+         if historical and trade_date:
+-            bak=self._query_tushare("bak_basic",{"trade_date":trade_date,"fields":"trade_date,ts_code,name,industry,float_share","latest_available":"false"})
+-            if not bak.error: bak_df=bak.data
+-        step_df=pd.DataFrame(); kpl_df=pd.DataFrame()
++            bak = self._query_tushare(
++                "bak_basic",
++                {"trade_date": trade_date, "fields": "trade_date,ts_code,name,industry,float_share", "latest_available": "false"},
++            )
++            if not bak.error:
++                bak_df = bak.data
++        step_df = pd.DataFrame()
++        kpl_df = pd.DataFrame()
+         if trade_date:
+-            step=self._query_tushare("limit_step",{"trade_date":trade_date,"latest_available":"false"})
+-            if not step.error: step_df=step.data
+-            kpl=self._query_tushare("kpl_list",{"trade_date":trade_date,"latest_available":"false"})
+-            if not kpl.error: kpl_df=kpl.data
+-        return stock_df,bak_df,step_df,kpl_df
+-
+-    def _normalize(self, raw: pd.DataFrame, *, trade_date: str | None, snapshot_time: str | None=None,
+-                   snapshot_id: str | None=None, historical: bool=False, source_provider: str="kaipanla",
+-                   source_api: str="morning_bidding", data_quality: str="complete") -> pd.DataFrame:
+-        stock,bak,step,kpl=self._reference_frames(trade_date,historical=historical)
+-        return normalize_kaipanla_bidding(raw,trade_date=trade_date,snapshot_time=snapshot_time,snapshot_id=snapshot_id,
+-            stock_basic_df=stock,bak_basic_df=bak,limit_step_df=step,kpl_list_df=kpl,historical=historical,
+-            source_provider=source_provider,source_api=source_api,data_quality=data_quality)
+-
+-    def query(self, data_type: str, params: dict[str,Any] | None=None) -> ProviderResponse:
+-        normalized=(data_type or "").strip().lower().replace("-","_").replace("/","_")
+-        if normalized in {"morning_bidding","bidding","morningbiddinglist"}: return self.query_live(dict(params or {}))
+-        if normalized in {"morning_bidding_history","bidding_history"}: return self.query_history(dict(params or {}))
++            step = self._query_tushare("limit_step", {"trade_date": trade_date, "latest_available": "false"})
++            if not step.error:
++                step_df = step.data
++            kpl = self._query_tushare("kpl_list", {"trade_date": trade_date, "latest_available": "false"})
++            if not kpl.error:
++                kpl_df = kpl.data
++        return stock_df, bak_df, step_df, kpl_df
++
++    def _normalize(
++        self,
++        raw: pd.DataFrame,
++        *,
++        trade_date: str | None,
++        snapshot_time: str | None = None,
++        snapshot_id: str | None = None,
++        historical: bool = False,
++        source_provider: str = "kaipanla",
++        source_api: str = "morning_bidding",
++        data_quality: str = "complete",
++    ) -> pd.DataFrame:
++        stock, bak, step, kpl = self._reference_frames(trade_date, historical=historical)
++        return normalize_kaipanla_bidding(
++            raw,
++            trade_date=trade_date,
++            snapshot_time=snapshot_time,
++            snapshot_id=snapshot_id,
++            stock_basic_df=stock,
++            bak_basic_df=bak,
++            limit_step_df=step,
++            kpl_list_df=kpl,
++            historical=historical,
++            source_provider=source_provider,
++            source_api=source_api,
++            data_quality=data_quality,
++        )
++
++    def query(self, data_type: str, params: dict[str, Any] | None = None) -> ProviderResponse:
++        normalized = (data_type or "").strip().lower().replace("-", "_").replace("/", "_")
++        if normalized in {"morning_bidding", "bidding", "morningbiddinglist"}:
++            return self.query_live(dict(params or {}))
++        if normalized in {"morning_bidding_history", "bidding_history"}:
++            return self.query_history(dict(params or {}))
+         return ProviderResponse(error=f"开盘啦暂不支持数据类型：{data_type}")
+ 
+-    def query_live(self, params: dict[str,Any]) -> ProviderResponse:
+-        allowed={"order":int(params.get("order",1)),"page_size":min(max(int(params.get("st",params.get("page_size",200))),1),1000),
+-                 "start_index":max(int(params.get("index",0)),0),"pid_type":int(params.get("pid_type",0)),
+-                 "b_type":int(params.get("b_type",4)),"max_pages":min(max(int(params.get("max_pages",1)),1),100)}
+-        fetched=self.client.fetch_all(**allowed)
+-        if fetched.error: return ProviderResponse(error=fetched.error,meta={"api_name":"morning_bidding","source_provider":"kaipanla"})
+-        now=self.china_now(); now=now if now.tzinfo else now.replace(tzinfo=_SHANGHAI)
+-        date=now.astimezone(_SHANGHAI).strftime("%Y%m%d")
+-        normalized=self._normalize(fetched.data,trade_date=date,snapshot_time=now.astimezone(_SHANGHAI).strftime("%Y-%m-%d %H:%M:%S"))
+-        return ProviderResponse(data=normalized,meta={"api_name":"morning_bidding","source_provider":"kaipanla","source_api":"morning_bidding",
+-            "actual_trade_date":date,"fallback_used":False,"data_quality":"complete","schema_version":"kaipanla_bidding.v2"})
+-
+-    def capture_snapshot(self, *, trade_date: str, snapshot_time: str, page_size: int=1000, max_pages: int=10) -> ProviderResponse:
+-        trade_date=self._validate_date(trade_date)
+-        existing=self.repository.get_snapshot(trade_date)
++    def query_live(self, params: dict[str, Any]) -> ProviderResponse:
++        allowed = {
++            "order": int(params.get("order", 1)),
++            "page_size": min(max(int(params.get("st", params.get("page_size", 200))), 1), 1000),
++            "start_index": max(int(params.get("index", 0)), 0),
++            "pid_type": int(params.get("pid_type", 0)),
++            "b_type": int(params.get("b_type", 4)),
++            "max_pages": min(max(int(params.get("max_pages", 1)), 1), 100),
++        }
++        fetched = self.client.fetch_all(**allowed)
++        if fetched.error:
++            return ProviderResponse(error=fetched.error, meta={"api_name": "morning_bidding", "source_provider": "kaipanla"})
++        if fetched.data is None or fetched.data.empty:
++            return ProviderResponse(error="开盘啦实时接口返回空数据，未生成业务结果", meta={"api_name": "morning_bidding", "source_provider": "kaipanla"})
++
++        now = _as_shanghai(self.china_now())
++        candidate = self._today()
++        in_window = _AUCTION_WINDOW_START <= now.time().replace(tzinfo=None) <= _AUCTION_WINDOW_END
++        status = self.get_open_date_status(candidate) if in_window else "unknown"
++        verified = in_window and status == "open"
++        trade_date = candidate if verified else None
++        warning = None
++        freshness = "verified_live" if verified else "unverified_realtime"
++        quality = "complete" if verified else "unverified"
++        if not verified:
++            reason = "当前不在 09:15—09:30 集合竞价校验窗口" if not in_window else "交易日状态无法确认"
++            warning = f"{reason}，实时结果未标注交易日，不能作为历史快照使用"
++        normalized = self._normalize(
++            fetched.data,
++            trade_date=trade_date,
++            snapshot_time=now.strftime("%Y-%m-%d %H:%M:%S"),
++            data_quality=quality,
++        )
++        return ProviderResponse(
++            data=normalized,
++            meta={
++                "api_name": "morning_bidding",
++                "source_provider": "kaipanla",
++                "source_api": "morning_bidding",
++                "actual_trade_date": trade_date,
++                "fallback_used": False,
++                "data_freshness": freshness,
++                "data_quality": quality,
++                "warning": warning,
++                "schema_version": SCHEMA_VERSION,
++            },
++        )
++
++    @staticmethod
++    def _valid_snapshot_frame(frame: pd.DataFrame) -> bool:
++        if frame is None or frame.empty:
++            return False
++        for column in ("股票代码", "0", "ts_code"):
++            if column in frame.columns and frame[column].astype(str).str.extract(r"(\d{6})", expand=False).notna().any():
++                return True
++        return False
++
++    def capture_snapshot(self, *, trade_date: str, snapshot_time: str, page_size: int = 1000, max_pages: int = 10) -> ProviderResponse:
++        trade_date = self._validate_date(trade_date)
++        existing = self.repository.get_snapshot(trade_date)
+         if existing:
+-            return ProviderResponse(data=pd.DataFrame(existing.normalized_data),meta={"snapshot_id":existing.snapshot_id,"snapshot_created":False,"record_count":existing.record_count})
+-        fetched=self.client.fetch_all(page_size=page_size,max_pages=max_pages)
+-        if fetched.error: return ProviderResponse(error=fetched.error,meta={"source_provider":"kaipanla"})
+-        normalized=self._normalize(fetched.data,trade_date=trade_date,snapshot_time=snapshot_time,historical=True)
+-        save=self.repository.save_snapshot(trade_date=trade_date,snapshot_time=snapshot_time,source_params=fetched.params,
+-            raw_payload=fetched.raw_pages,normalized_data=normalized.to_dict(orient="records"),data_quality="complete")
+-        return ProviderResponse(data=pd.DataFrame(save.snapshot.normalized_data),meta={"snapshot_id":save.snapshot.snapshot_id,
+-            "snapshot_created":save.created,"record_count":save.snapshot.record_count,"schema_version":save.snapshot.schema_version})
++            return ProviderResponse(
++                data=pd.DataFrame(existing.normalized_data),
++                meta={"snapshot_id": existing.snapshot_id, "snapshot_created": False, "record_count": existing.record_count},
++            )
++        fetched = self.client.fetch_all(page_size=page_size, max_pages=max_pages)
++        if fetched.error:
++            return ProviderResponse(error=fetched.error, meta={"source_provider": "kaipanla"})
++        if not self._valid_snapshot_frame(fetched.data):
++            return ProviderResponse(
++                error="开盘啦快照采集结果为空或缺少有效股票代码，已拒绝保存",
++                meta={"source_provider": "kaipanla", "record_count": 0},
++            )
++        normalized = self._normalize(
++            fetched.data, trade_date=trade_date, snapshot_time=snapshot_time, historical=True
++        )
++        if not self._valid_snapshot_frame(normalized):
++            return ProviderResponse(
++                error="开盘啦快照标准化后为空或缺少有效股票代码，已拒绝保存",
++                meta={"source_provider": "kaipanla", "record_count": 0},
++            )
++        save = self.repository.save_snapshot(
++            trade_date=trade_date,
++            snapshot_time=snapshot_time,
++            source_params=fetched.params,
++            raw_payload=fetched.raw_pages,
++            normalized_data=normalized.to_dict(orient="records"),
++            data_quality="complete",
++        )
++        return ProviderResponse(
++            data=pd.DataFrame(save.snapshot.normalized_data),
++            meta={
++                "snapshot_id": save.snapshot.snapshot_id,
++                "snapshot_created": save.created,
++                "record_count": save.snapshot.record_count,
++                "schema_version": save.snapshot.schema_version,
++            },
++        )
+ 
+     @staticmethod
+-    def _filter_snapshot(df: pd.DataFrame, params: dict[str,Any]) -> pd.DataFrame:
+-        result=df.copy()
+-        ts_code=str(params.get("ts_code") or "").strip()
+-        symbol=str(params.get("股票代码") or params.get("symbol") or "").strip()
+-        if ts_code and "ts_code" in result.columns: result=result[result["ts_code"].astype(str)==ts_code]
++    def _filter_snapshot(df: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
++        result = df.copy()
++        ts_code = str(params.get("ts_code") or "").strip()
++        symbol = str(params.get("股票代码") or params.get("symbol") or "").strip()
++        if ts_code and "ts_code" in result.columns:
++            result = result[result["ts_code"].astype(str) == ts_code]
+         if symbol:
+-            column="股票代码" if "股票代码" in result.columns else "ts_code"
+-            result=result[result[column].astype(str).str.extract(r"(\d{6})",expand=False)==re.sub(r"\D","",symbol)[:6]]
+-        try: limit=max(int(params.get("limit",0)),0)
+-        except (TypeError,ValueError): limit=0
++            column = "股票代码" if "股票代码" in result.columns else "ts_code"
++            result = result[result[column].astype(str).str.extract(r"(\d{6})", expand=False) == re.sub(r"\D", "", symbol)[:6]]
++        try:
++            limit = max(int(params.get("limit", 0)), 0)
++        except (TypeError, ValueError):
++            limit = 0
+         return result.head(limit) if limit else result
+ 
+-    def _snapshot_response(self, snapshot, params: dict[str,Any], requested: str | None, *, fallback_used: bool, freshness: str) -> ProviderResponse:
+-        data=self._filter_snapshot(pd.DataFrame(snapshot.normalized_data),params)
+-        return ProviderResponse(data=data,meta={"api_name":"morning_bidding_history","source_provider":"kaipanla_snapshot",
+-            "source_api":"morning_bidding","requested_trade_date":requested,"actual_trade_date":snapshot.trade_date,
+-            "fallback_used":fallback_used,"data_freshness":freshness,"data_quality":snapshot.data_quality,
+-            "snapshot_id":snapshot.snapshot_id,"snapshot_time":snapshot.snapshot_time,"payload_hash":snapshot.payload_hash,
+-            "schema_version":snapshot.schema_version})
+-
+-    def query_history(self, params: dict[str,Any]) -> ProviderResponse:
+-        try: requested=self._validate_date(params.get("trade_date"),required=False)
+-        except ValueError as exc: return ProviderResponse(error=str(exc),meta={"http_status":400})
+-        sid=str(params.get("snapshot_id") or "").strip() or None
++    def _snapshot_response(
++        self, snapshot, params: dict[str, Any], requested: str | None, *, fallback_used: bool, freshness: str
++    ) -> ProviderResponse:
++        data = self._filter_snapshot(pd.DataFrame(snapshot.normalized_data), params)
++        return ProviderResponse(
++            data=data,
++            meta={
++                "api_name": "morning_bidding_history",
++                "source_provider": "kaipanla_snapshot",
++                "source_api": "morning_bidding",
++                "requested_trade_date": requested,
++                "actual_trade_date": snapshot.trade_date,
++                "fallback_used": fallback_used,
++                "data_freshness": freshness,
++                "data_quality": snapshot.data_quality,
++                "snapshot_id": snapshot.snapshot_id,
++                "snapshot_time": snapshot.snapshot_time,
++                "payload_hash": snapshot.payload_hash,
++                "schema_version": snapshot.schema_version,
++            },
++        )
++
++    def query_history(self, params: dict[str, Any]) -> ProviderResponse:
++        try:
++            requested = self._validate_date(params.get("trade_date"), required=False)
++        except ValueError as exc:
++            return ProviderResponse(error=str(exc), meta={"http_status": 400})
++        sid = str(params.get("snapshot_id") or "").strip() or None
+         if sid:
+-            if not _SNAPSHOT_RE.fullmatch(sid): return ProviderResponse(error="snapshot_id 格式无效",meta={"http_status":400})
+-            snap=self.repository.get_by_id(sid)
+-            if snap is None: return ProviderResponse(error="未找到指定 snapshot_id 的开盘啦历史快照",meta={"http_status":404,"snapshot_id":sid})
+-            if requested and requested != snap.trade_date: return ProviderResponse(error="trade_date 与 snapshot_id 对应交易日不一致",meta={"http_status":400,"snapshot_id":sid})
+-            return self._snapshot_response(snap,params,requested or snap.trade_date,fallback_used=False,freshness="exact_snapshot_id")
+-        snap=self.repository.get_latest_snapshot(requested)
++            if not _SNAPSHOT_RE.fullmatch(sid):
++                return ProviderResponse(error="snapshot_id 格式无效", meta={"http_status": 400})
++            snap = self.repository.get_by_id(sid)
++            if snap is None:
++                return ProviderResponse(error="未找到指定 snapshot_id 的开盘啦历史快照", meta={"http_status": 404, "snapshot_id": sid})
++            if requested and requested != snap.trade_date:
++                return ProviderResponse(error="trade_date 与 snapshot_id 对应交易日不一致", meta={"http_status": 400, "snapshot_id": sid})
++            return self._snapshot_response(snap, params, requested or snap.trade_date, fallback_used=False, freshness="exact_snapshot_id")
++
++        snap = self.repository.get_latest_snapshot(requested)
+         if snap is not None:
+-            fallback=bool(requested and snap.trade_date != requested)
+-            return self._snapshot_response(snap,params,requested,fallback_used=fallback,freshness="latest_snapshot_on_or_before" if fallback else "exact_or_latest_snapshot")
+-        fallback_date=requested or self.china_now().astimezone(_SHANGHAI).strftime("%Y%m%d")
+-        result=self._query_tushare("stk_auction_o",{"trade_date":fallback_date,"latest_available":"true"})
+-        if result.error: return ProviderResponse(error=f"无可用开盘啦快照，Tushare降级失败：{result.error}",meta={"http_status":502,"fallback_used":True})
+-        actual=str((result.meta or {}).get("actual_trade_date") or fallback_date)
+-        df=self._normalize(result.data,trade_date=actual,historical=True,source_provider="tushare",source_api="stk_auction_o",data_quality="partial")
+-        df=self._filter_snapshot(df,params)
+-        return ProviderResponse(data=df,meta={"api_name":"morning_bidding_history","source_provider":"tushare","source_api":"stk_auction_o",
+-            "requested_trade_date":requested,"actual_trade_date":actual,"fallback_used":True,"data_freshness":"tushare_fallback",
+-            "data_quality":"partial","snapshot_id":None,"schema_version":"kaipanla_bidding.v2"})
+-
+-
+-_service: KaipanlaBiddingService | None=None
++            fallback = bool(requested and snap.trade_date != requested)
++            if fallback:
++                freshness = "latest_snapshot_on_or_before"
++            elif requested:
++                freshness = "exact_snapshot"
++            else:
++                freshness = "latest_snapshot"
++            return self._snapshot_response(snap, params, requested, fallback_used=fallback, freshness=freshness)
++
++        fallback_bound = requested or self._today()
++        fallback_date, calendar_error = self._resolve_latest_open_date(fallback_bound)
++        if not fallback_date:
++            return ProviderResponse(
++                error=f"无可用开盘啦快照，且无法确认最近交易日：{calendar_error}",
++                meta={
++                    "http_status": 502,
++                    "requested_trade_date": requested,
++                    "actual_trade_date": None,
++                    "fallback_used": True,
++                    "fallback_reason": "trade_calendar_unavailable",
++                },
++            )
++        result = self._query_tushare(
++            "stk_auction_o", {"trade_date": fallback_date, "latest_available": "false"}
++        )
++        if result.error:
++            return ProviderResponse(
++                error=f"无可用开盘啦快照，Tushare降级失败：{result.error}",
++                meta={
++                    "http_status": 502,
++                    "requested_trade_date": requested,
++                    "actual_trade_date": fallback_date,
++                    "fallback_used": True,
++                    "fallback_reason": "kaipanla_snapshot_not_found",
++                },
++            )
++        if result.data is None or result.data.empty:
++            return ProviderResponse(
++                error=f"无可用开盘啦快照，Tushare 在交易日 {fallback_date} 也未返回数据",
++                meta={
++                    "http_status": 502,
++                    "requested_trade_date": requested,
++                    "actual_trade_date": fallback_date,
++                    "fallback_used": True,
++                    "fallback_reason": "kaipanla_snapshot_not_found",
++                },
++            )
++        actual = str((result.meta or {}).get("actual_trade_date") or fallback_date)
++        df = self._normalize(
++            result.data,
++            trade_date=actual,
++            historical=True,
++            source_provider="tushare",
++            source_api="stk_auction_o",
++            data_quality="partial",
++        )
++        df = self._filter_snapshot(df, params)
++        return ProviderResponse(
++            data=df,
++            meta={
++                "api_name": "morning_bidding_history",
++                "source_provider": "tushare",
++                "source_api": "stk_auction_o",
++                "requested_trade_date": requested,
++                "actual_trade_date": actual,
++                "fallback_used": True,
++                "fallback_reason": "kaipanla_snapshot_not_found",
++                "data_freshness": "tushare_historical_fallback",
++                "data_quality": "partial",
++                "warning": _FALLBACK_WARNING,
++                "snapshot_id": None,
++                "schema_version": SCHEMA_VERSION,
++            },
++        )
++
++
++_service: KaipanlaBiddingService | None = None
++
+ 
+ def get_kaipanla_bidding_service() -> KaipanlaBiddingService:
+     global _service
+-    if _service is None: _service=KaipanlaBiddingService()
++    if _service is None:
++        _service = KaipanlaBiddingService()
+     return _service
+--- a/services/kaipanla_snapshot_repository.py
++++ b/services/kaipanla_snapshot_repository.py
+@@ -163,7 +163,10 @@
+         conn = self._conn()
+         try:
+             conn.execute("BEGIN IMMEDIATE")
+-            existing = conn.execute("SELECT * FROM kaipanla_bidding_snapshots WHERE trade_date=? ORDER BY snapshot_time ASC,created_at ASC LIMIT 1", (trade_date,)).fetchone()
++            existing = conn.execute(
++                "SELECT * FROM kaipanla_bidding_snapshots WHERE trade_date=? AND payload_hash=? LIMIT 1",
++                (trade_date, payload_hash),
++            ).fetchone()
+             if existing is not None:
+                 conn.commit()
+                 return SnapshotSaveResult(self._row_to_snapshot(existing), False)
+@@ -178,8 +181,13 @@
+             return SnapshotSaveResult(self.get_by_id(snapshot_id), True)
+         except sqlite3.IntegrityError:
+             conn.rollback()
+-            existing = self.get_snapshot(trade_date)
+-            if existing is None: raise
++            row = self._conn().execute(
++                "SELECT * FROM kaipanla_bidding_snapshots WHERE trade_date=? AND payload_hash=? LIMIT 1",
++                (trade_date, payload_hash),
++            ).fetchone()
++            existing = self._row_to_snapshot(row)
++            if existing is None:
++                raise
+             return SnapshotSaveResult(existing, False)
+         except Exception:
+             conn.rollback(); raise
+--- a/services/kaipanla_snapshot_scheduler.py
++++ b/services/kaipanla_snapshot_scheduler.py
+@@ -90,7 +90,13 @@
+             return {"status": "outside_window"}
+ 
+         trade_date = current.strftime("%Y%m%d")
+-        if not self.service.is_open_date(trade_date):
++        if hasattr(self.service, "get_open_date_status"):
++            market_status = self.service.get_open_date_status(trade_date)
++        else:
++            market_status = "open" if self.service.is_open_date(trade_date) else "closed"
++        if market_status == "unknown":
++            return {"status": "calendar_error", "trade_date": trade_date}
++        if market_status != "open":
+             return {"status": "market_closed", "trade_date": trade_date}
+         if self.repository.has_snapshot(trade_date):
+             return {"status": "already_captured", "trade_date": trade_date}
+@@ -139,7 +145,7 @@
+         while not self._stop_event.is_set():
+             try:
+                 result = self.run_once()
+-                if result.get("status") in {"captured", "capture_error"}:
++                if result.get("status") in {"captured", "capture_error", "calendar_error"}:
+                     log = logging.info if result["status"] == "captured" else logging.error
+                     log("[开盘啦快照] %s", result)
+             except Exception:
+--- a/integrations/feishu/bitable.py
++++ b/integrations/feishu/bitable.py
+@@ -7,13 +7,18 @@
+ 2. 竞价表：支持把开盘啦早盘竞价数据写入飞书多维表格。
+ """
+ import logging
++from dataclasses import dataclass
+ from datetime import datetime
+ from typing import Any, Optional
+ 
+ import lark_oapi as lark
+ from lark_oapi.api.bitable.v1 import (
++    AppTableField,
++    AppTableFieldProperty,
+     AppTableRecord,
++    CreateAppTableFieldRequest,
+     CreateAppTableRecordRequest,
++    ListAppTableFieldRequest,
+     ListAppTableRecordRequest,
+     UpdateAppTableRecordRequest,
+ )
+@@ -21,6 +26,69 @@
+ import config
+ 
+ 
++
++@dataclass(frozen=True, slots=True)
++class BiddingFieldSpec:
++    name: str
++    type: int
++    accepted_types: tuple[int, ...] = ()
++    date_formatter: str | None = None
++
++    def accepts(self, actual_type: Any) -> bool:
++        try:
++            value = int(actual_type)
++        except (TypeError, ValueError):
++            return False
++        return value in (self.accepted_types or (self.type,))
++
++
++# Feishu Bitable field type codes used here: 1=text, 2=number, 3=single select,
++# 5=date/datetime, 7=checkbox. Existing compatible select fields are retained.
++def _field(name: str, type_code: int, *accepted: int, date_formatter: str | None = None) -> BiddingFieldSpec:
++    return BiddingFieldSpec(name, type_code, (type_code, *accepted), date_formatter)
++
++
++BIDDING_FIELD_SPECS: dict[str, BiddingFieldSpec] = {
++    "股票代码": _field("股票代码", 1),
++    "股票名称": _field("股票名称", 1),
++    "当前价格": _field("当前价格", 2),
++    "实时涨幅": _field("实时涨幅", 2),
++    "涨停委买额": _field("涨停委买额", 2),
++    "竞价涨幅": _field("竞价涨幅", 2),
++    "竞价竞额": _field("竞价竞额", 2),
++    "竞价换手": _field("竞价换手", 2),
++    "竞价成交额": _field("竞价成交额", 2),
++    "20分后涨停委买": _field("20分后涨停委买", 2),
++    "板块": _field("板块", 1),
++    "实际流通": _field("实际流通", 2),
++    "连板": _field("连板", 1),
++    "原始字段10": _field("原始字段10", 2),
++    "原始字段13": _field("原始字段13", 2),
++    "原始字段14": _field("原始字段14", 2),
++    "原始字段15": _field("原始字段15", 2),
++    "竞价匹配额": _field("竞价匹配额", 2),
++    "主力净额": _field("主力净额", 2),
++    "主力买入": _field("主力买入", 2),
++    "主力卖出": _field("主力卖出", 2),
++    "主力卖出额": _field("主力卖出额", 2),
++    "交易日期": _field("交易日期", 1),
++    "快照时间": _field("快照时间", 5, date_formatter="yyyy-MM-dd HH:mm"),
++    "快照ID": _field("快照ID", 1),
++    "数据源": _field("数据源", 1, 3),
++    "数据质量": _field("数据质量", 1, 3),
++    "Schema版本": _field("Schema版本", 1),
++    "主力资金关系校验": _field("主力资金关系校验", 7),
++    "字段校验警告": _field("字段校验警告", 1),
++    "名称来源": _field("名称来源", 1, 3),
++    "行业": _field("行业", 1),
++    "历史行业": _field("历史行业", 1),
++    "连板高度": _field("连板高度", 2),
++    "连板来源": _field("连板来源", 1, 3),
++    "limit_step连板": _field("limit_step连板", 2),
++    "kpl_list状态": _field("kpl_list状态", 1),
++    "导入日期": _field("导入日期", 5, date_formatter="yyyy-MM-dd"),
++    "导出时间点": _field("导出时间点", 5, date_formatter="yyyy-MM-dd HH:mm"),
++}
+ 
+ 
+ def _present(value: Any) -> bool:
+@@ -51,6 +119,7 @@
+         "快照ID": ("snapshot_id", str), "数据源": ("source_provider", str),
+         "数据质量": ("data_quality", str), "Schema版本": ("schema_version", str),
+         "主力资金关系校验": ("main_amount_relation_valid", bool),
++        "字段校验警告": ("field_validation_warning", str),
+         "名称来源": ("name_source", str), "行业": ("stock_basic_industry", str),
+         "历史行业": ("bak_basic_industry", str), "连板高度": ("limit_up_days", None),
+         "连板来源": ("limit_up_days_source", str), "limit_step连板": ("limit_step_nums", None),
+@@ -84,6 +153,7 @@
+         self.bidding_app_token = config.FEISHU_BIDDING_APP_TOKEN
+         self.bidding_table_id = config.FEISHU_BIDDING_TABLE_ID
+ 
++        self._bidding_schema_checked = False
+         self.client = (
+             lark.Client.builder()
+             .app_id(self.app_id)
+@@ -128,14 +198,125 @@
+         logging.warning("[飞书] 日期转换失败，使用当前时间兜底: %s", text)
+         return int(datetime.now().timestamp() * 1000)
+ 
+-    def _safe_value(self, value: Any, default: float = 0) -> float:
+-        """安全转换数值，空值或转换失败时返回默认值。"""
+-        if value is None or value == "" or value == "None":
+-            return default
+-        try:
+-            return float(value)
+-        except Exception:
+-            return default
++    def list_fields(
++        self,
++        app_token: Optional[str] = None,
++        table_id: Optional[str] = None,
++        page_size: int = 100,
++    ) -> dict[str, dict[str, Any]]:
++        """Read real field definitions from a Bitable table."""
++        app_token = app_token or self.bidding_app_token
++        table_id = table_id or self.bidding_table_id
++        if not app_token or not table_id:
++            raise RuntimeError("飞书竞价表 app_token/table_id 未配置")
++        fields: dict[str, dict[str, Any]] = {}
++        page_token = None
++        while True:
++            builder = (
++                ListAppTableFieldRequest.builder()
++                .app_token(app_token)
++                .table_id(table_id)
++                .page_size(page_size)
++            )
++            if page_token:
++                builder = builder.page_token(page_token)
++            response = self.client.bitable.v1.app_table_field.list(builder.build())
++            if not response.success():
++                raise RuntimeError(f"读取飞书竞价表字段失败：{response.msg}")
++            for item in (getattr(response.data, "items", None) or []):
++                name = str(getattr(item, "field_name", "") or "").strip()
++                if name:
++                    fields[name] = {
++                        "field_id": getattr(item, "field_id", None),
++                        "field_name": name,
++                        "type": getattr(item, "type", None),
++                        "ui_type": getattr(item, "ui_type", None),
++                    }
++            if not response.data or not getattr(response.data, "has_more", False):
++                break
++            page_token = getattr(response.data, "page_token", None)
++        return fields
++
++    def create_field(
++        self,
++        spec: BiddingFieldSpec,
++        app_token: Optional[str] = None,
++        table_id: Optional[str] = None,
++    ) -> bool:
++        """Create one missing field; existing fields are never changed or deleted."""
++        app_token = app_token or self.bidding_app_token
++        table_id = table_id or self.bidding_table_id
++        builder = AppTableField.builder().field_name(spec.name).type(spec.type)
++        if spec.date_formatter:
++            prop = AppTableFieldProperty.builder().date_formatter(spec.date_formatter).build()
++            builder = builder.property(prop)
++        request = (
++            CreateAppTableFieldRequest.builder()
++            .app_token(app_token)
++            .table_id(table_id)
++            .request_body(builder.build())
++            .build()
++        )
++        response = self.client.bitable.v1.app_table_field.create(request)
++        if not response.success():
++            logging.error("[飞书竞价] 创建字段失败 %s: %s", spec.name, response.msg)
++            return False
++        return True
++
++    def check_bidding_schema(self, *, create_missing: bool = False) -> dict[str, Any]:
++        """Validate the real table schema and optionally add only missing compatible fields."""
++        existing = self.list_fields(app_token=self.bidding_app_token, table_id=self.bidding_table_id)
++        missing: list[str] = []
++        created: list[str] = []
++        mismatches: list[dict[str, Any]] = []
++        errors: list[str] = []
++        for name, spec in BIDDING_FIELD_SPECS.items():
++            current = existing.get(name)
++            if current is None:
++                missing.append(name)
++                if create_missing:
++                    try:
++                        if self.create_field(spec, app_token=self.bidding_app_token, table_id=self.bidding_table_id):
++                            created.append(name)
++                        else:
++                            errors.append(f"创建字段失败：{name}")
++                    except Exception as exc:
++                        errors.append(f"创建字段异常：{name}: {exc}")
++                continue
++            if not spec.accepts(current.get("type")):
++                mismatches.append({
++                    "field_name": name,
++                    "actual_type": current.get("type"),
++                    "expected_types": list(spec.accepted_types or (spec.type,)),
++                    "field_id": current.get("field_id"),
++                })
++        unresolved = [name for name in missing if name not in created]
++        return {
++            "ok": not unresolved and not mismatches and not errors,
++            "existing_count": len(existing),
++            "missing": missing,
++            "created": created,
++            "unresolved_missing": unresolved,
++            "type_mismatches": mismatches,
++            "errors": errors,
++        }
++
++    def ensure_bidding_schema(self, *, create_missing: bool = True) -> dict[str, Any]:
++        if self._bidding_schema_checked:
++            return {"ok": True, "cached": True}
++        report = self.check_bidding_schema(create_missing=create_missing)
++        if not report.get("ok"):
++            names = [item.get("field_name") for item in report.get("type_mismatches", [])]
++            details = []
++            if report.get("unresolved_missing"):
++                details.append("缺失字段=" + ",".join(report["unresolved_missing"]))
++            if names:
++                details.append("类型不兼容=" + ",".join(str(x) for x in names))
++            if report.get("errors"):
++                details.append("错误=" + ";".join(report["errors"]))
++            raise RuntimeError("飞书竞价表字段检查未通过：" + "；".join(details))
++        self._bidding_schema_checked = True
++        return report
+ 
+     def list_all_records(
+         self,
+@@ -276,6 +457,8 @@
+         """新增一条开盘啦竞价数据到飞书竞价表。"""
+         try:
+             fields = build_bidding_fields_v2(bidding_data)
++            if _present(fields.get("快照时间")):
++                fields["快照时间"] = self._str_to_ms(fields["快照时间"])
+             if _present(bidding_data.get("导入日期")):
+                 fields["导入日期"] = self._str_to_ms(bidding_data.get("导入日期"))
+             if _present(bidding_data.get("导出时间点")):
+--- a/tests/test_kaipanla_bidding_adapter.py
++++ b/tests/test_kaipanla_bidding_adapter.py
+@@ -6,129 +6,67 @@
+ import pandas as pd
+ 
+ from integrations.market_data.kaipanla.adapter import normalize_kaipanla_bidding
+-from integrations.market_data.kaipanla.schema import STANDARD_BIDDING_COLUMNS
+ 
+ 
+ class KaipanlaBiddingAdapterTests(unittest.TestCase):
+-    def test_numeric_columns_are_normalized_to_stable_schema(self):
++    def test_output_is_lossless_superset_instead_of_fixed_column_slice(self):
+         raw = pd.DataFrame([[
+             "000001", "平安银行", 12.35, 3.15, 86_000_000, 3.21,
+             -12_000_000, 1.25, 36_000_000, 72_000_000,
+-            36_000_000, "银行", 1_800_000_000,
+-            -12_000_000, 24_000_000, -36_000_000, 2,
++            36_000_001, "银行", 1_800_000_000,
++            -12_000_000, 24_000_000, -36_000_000, "2连板",
+         ]])
++        row = normalize_kaipanla_bidding(raw, trade_date="20260717").iloc[0]
++        for field in ("10", "13", "14", "15", "竞价匹配额", "主力净额", "主力买入", "主力卖出"):
++            self.assertIn(field, row.index)
++        self.assertEqual(row["auction_net_amount"], -12_000_000)
++        self.assertEqual(row["auction_match_amount"], 36_000_001)
++        self.assertEqual(row["auction_amount"], 36_000_000)
++        self.assertEqual(row["main_net_amount"], -12_000_000)
++        self.assertEqual(row["main_sell_amount_signed"], -36_000_000)
++        self.assertEqual(row["main_sell_amount"], 36_000_000)
+ 
+-        result = normalize_kaipanla_bidding(
+-            raw,
+-            trade_date="20260717",
+-            snapshot_time="2026-07-17 09:25:05",
+-            snapshot_id="20260717_092505_abcd",
+-        )
+-
+-        self.assertEqual(list(result.columns), STANDARD_BIDDING_COLUMNS)
+-        row = result.iloc[0].to_dict()
+-        self.assertEqual(row["ts_code"], "000001.SZ")
+-        self.assertEqual(row["name"], "平安银行")
+-        self.assertEqual(row["auction_amount"], 36_000_000.0)
+-        self.assertEqual(row["auction_net_amount"], -12_000_000.0)
+-        self.assertEqual(row["auction_buy_amount"], 24_000_000.0)
+-        self.assertEqual(row["auction_sell_amount"], 36_000_000.0)
+-        self.assertEqual(row["snapshot_id"], "20260717_092505_abcd")
+-        self.assertEqual(row["source_provider"], "kaipanla")
+-        self.assertFalse(any(str(column).isdigit() for column in result.columns))
+-
+-    def test_unverified_index_10_is_not_guessed_as_auction_amount(self):
+-        raw = pd.DataFrame([{
+-            0: "600000",
+-            1: "浦发银行",
+-            10: 88_000_000,
+-        }])
+-
+-        result = normalize_kaipanla_bidding(raw, trade_date="20260717")
+-
+-        self.assertTrue(pd.isna(result.iloc[0]["auction_amount"]))
+-        self.assertNotIn("raw_field_10", result.columns)
+-        self.assertNotIn("10", result.columns)
+-
+-    def test_stock_basic_mapping_overrides_exchange_guess_and_fills_name_sector(self):
++    def test_tushare_industry_does_not_fill_kaipanla_sector(self):
+         raw = pd.DataFrame([{0: "920001", 1: "", 11: ""}])
+         stock_basic = pd.DataFrame([{
+-            "symbol": "920001",
+-            "ts_code": "920001.BJ",
+-            "name": "北交测试",
+-            "industry": "机械",
++            "symbol": "920001", "ts_code": "920001.BJ", "name": "北交测试", "industry": "机械",
+         }])
+-
+-        result = normalize_kaipanla_bidding(
+-            raw,
+-            trade_date="20260717",
+-            stock_basic_df=stock_basic,
+-        )
+-
+-        row = result.iloc[0]
++        row = normalize_kaipanla_bidding(raw, trade_date="20260717", stock_basic_df=stock_basic).iloc[0]
+         self.assertEqual(row["ts_code"], "920001.BJ")
+         self.assertEqual(row["name"], "北交测试")
+-        self.assertEqual(row["sector"], "机械")
++        self.assertTrue(pd.isna(row["sector"]))
++        self.assertEqual(row["stock_basic_industry"], "机械")
+ 
+-    def test_net_amount_falls_back_to_named_buy_minus_sell(self):
+-        raw = pd.DataFrame([{
+-            0: "300001",
+-            "auction_buy_amount": 150.0,
+-            "auction_sell_amount": 40.0,
+-        }])
+-
+-        result = normalize_kaipanla_bidding(raw, trade_date="20260717")
+-
+-        row = result.iloc[0]
+-        self.assertEqual(row["auction_buy_amount"], 150.0)
+-        self.assertEqual(row["auction_sell_amount"], 40.0)
+-        self.assertEqual(row["auction_net_amount"], 110.0)
+-
+-    def test_unverified_numeric_13_14_15_triplet_is_not_exposed(self):
+-        raw = pd.DataFrame([{0: "300001", 13: 1.0, 14: 100.0, 15: -40.0}])
+-
+-        result = normalize_kaipanla_bidding(raw, trade_date="20260717")
+-
+-        row = result.iloc[0]
+-        self.assertTrue(pd.isna(row["auction_net_amount"]))
+-        self.assertTrue(pd.isna(row["auction_buy_amount"]))
+-        self.assertTrue(pd.isna(row["auction_sell_amount"]))
+-
+-    def test_stock_reference_handles_nullable_fields_without_boolean_coercion(self):
++    def test_nullable_reference_fields_do_not_break_code_matching(self):
+         raw = pd.DataFrame([{0: "920002", 1: None, 11: None}])
+         stock_basic = pd.DataFrame([{
+-            "symbol": pd.NA,
+-            "ts_code": "920002.BJ",
+-            "name": "北交可空字段",
+-            "industry": pd.NA,
+-            "sector": "机械设备",
++            "symbol": pd.NA, "ts_code": "920002.BJ", "name": "北交可空字段", "industry": pd.NA,
+         }])
++        row = normalize_kaipanla_bidding(raw, trade_date="20260717", stock_basic_df=stock_basic).iloc[0]
++        self.assertEqual(row["ts_code"], "920002.BJ")
++        self.assertEqual(row["name"], "北交可空字段")
++        self.assertTrue(pd.isna(row["sector"]))
+ 
+-        result = normalize_kaipanla_bidding(
+-            raw, trade_date="20260717", stock_basic_df=stock_basic
+-        )
++    def test_legacy_auction_buy_sell_fields_are_not_reused(self):
++        raw = pd.DataFrame([{
++            0: "300001", 6: 110.0,
++            "auction_buy_amount": 150.0, "auction_sell_amount": 40.0,
++            13: 1.0, 14: 100.0, 15: -40.0,
++        }])
++        row = normalize_kaipanla_bidding(raw, trade_date="20260717").iloc[0]
++        self.assertEqual(row["auction_net_amount"], 110.0)
++        self.assertTrue(pd.isna(row["main_net_amount"]))
++        self.assertFalse(bool(row["main_amount_relation_valid"]))
++        self.assertIn("13=14+15", row["field_validation_warning"])
+ 
+-        self.assertEqual(result.iloc[0]["ts_code"], "920002.BJ")
+-        self.assertEqual(result.iloc[0]["sector"], "机械设备")
+-
+-
+-    def test_auction_pct_is_derived_from_price_and_pre_close_for_tushare_fallback(self):
+-        raw = pd.DataFrame([{
+-            "ts_code": "000001.SZ",
+-            "price": 10.50,
+-            "pre_close": 10.00,
+-        }])
+-
+-        result = normalize_kaipanla_bidding(
+-            raw,
++    def test_raw_10_is_preserved_but_never_guessed_as_auction_amount(self):
++        row = normalize_kaipanla_bidding(
++            pd.DataFrame([{0: "600000", 1: "浦发银行", 10: 88_000_000}]),
+             trade_date="20260717",
+-            source_provider="tushare",
+-            source_api="stk_auction_o",
+-            data_quality="partial",
+-        )
+-
+-        self.assertAlmostEqual(float(result.iloc[0]["auction_pct"]), 5.0, places=6)
+-
++        ).iloc[0]
++        self.assertEqual(row["10"], 88_000_000)
++        self.assertEqual(row["auction_match_amount"], 88_000_000)
++        self.assertTrue(pd.isna(row["auction_amount"]))
+ 
+ 
+ if __name__ == "__main__":
+--- a/tests/test_kaipanla_bidding_service.py
++++ b/tests/test_kaipanla_bidding_service.py
+@@ -32,236 +32,123 @@
+     def _result(data=None, error=None, meta=None):
+         return SimpleNamespace(data=data if data is not None else pd.DataFrame(), error=error, meta=meta or {})
+ 
+-    def test_live_query_enriches_name_sector_and_limit_days(self):
+-        raw = pd.DataFrame([{0: "000001", 2: 12.3, 16: None}])
++    @staticmethod
++    def _raw_fetch(data):
++        def fetch_page(**kwargs):
++            return data, {"ret": 0, "info": data.values.tolist()}, None, kwargs
++        return fetch_page
+ 
+-        def fetch_page(**kwargs):
+-            return raw, {"ret": 0, "info": raw.values.tolist()}, None, kwargs
+-
+-        def market_query(provider, api_name, params, **kwargs):
+-            self.assertEqual(provider, "tushare")
+-            if api_name == "stock_basic":
+-                return self._result(pd.DataFrame([{
+-                    "symbol": "000001", "ts_code": "000001.SZ",
+-                    "name": "平安银行", "industry": "银行",
+-                }]))
+-            if api_name == "trade_cal":
+-                return self._result(pd.DataFrame([{"cal_date": "20260717", "is_open": 1}]))
+-            if api_name == "limit_step":
+-                return self._result(
+-                    pd.DataFrame([{"ts_code": "000001.SZ", "trade_date": "20260717", "nums": "3"}]),
+-                    meta={"actual_trade_date": "20260717"},
+-                )
+-            if api_name == "kpl_list":
+-                return self._result(pd.DataFrame())
+-            raise AssertionError(api_name)
+-
+-        service = KaipanlaBiddingService(
+-            repository=self.repo,
+-            client=KaipanlaClient(fetch_page=fetch_page),
+-            market_query=market_query,
+-            china_today=lambda: "20260717",
+-            china_now=lambda: datetime(2026, 7, 17, 9, 25, tzinfo=ZoneInfo("Asia/Shanghai")),
+-        )
+-        response = service.query("morning_bidding", {"st": 20})
+-
+-        self.assertIsNone(response.error)
+-        row = response.data.iloc[0]
+-        self.assertEqual(row["name"], "平安银行")
+-        self.assertEqual(row["sector"], "银行")
+-        self.assertEqual(row["limit_up_days"], 3)
+-        self.assertEqual(response.meta["actual_trade_date"], "20260717")
+-        self.assertEqual(response.meta["source_provider"], "kaipanla")
+-
+-    def test_live_query_does_not_claim_trade_date_outside_auction_window(self):
+-        raw = pd.DataFrame([{0: "000001", 2: 12.3}])
+-
+-        def fetch_page(**kwargs):
+-            return raw, {"ret": 0, "info": raw.values.tolist()}, None, kwargs
++    def test_live_query_marks_trade_date_only_inside_verified_auction_window(self):
++        raw = pd.DataFrame([{0: "000001", 1: "平安银行", 6: 1, 10: 2, 13: 3, 14: 5, 15: -2}])
+ 
+         def market_query(provider, api_name, params, **kwargs):
+             if api_name == "trade_cal":
+                 return self._result(pd.DataFrame([{"cal_date": "20260717", "is_open": 1}]))
+-            if api_name == "stock_basic":
+-                return self._result(pd.DataFrame())
+-            if api_name in {"limit_step", "kpl_list"}:
+-                return self._result(pd.DataFrame())
+-            raise AssertionError(api_name)
++            return self._result(pd.DataFrame())
+ 
+         service = KaipanlaBiddingService(
+             repository=self.repo,
+-            client=KaipanlaClient(fetch_page=fetch_page),
++            client=KaipanlaClient(fetch_page=self._raw_fetch(raw)),
+             market_query=market_query,
+-            china_today=lambda: "20260717",
++            china_now=lambda: datetime(2026, 7, 17, 9, 25, tzinfo=ZoneInfo("Asia/Shanghai")),
++        )
++        response = service.query_live({"st": 20})
++        self.assertEqual(response.meta["actual_trade_date"], "20260717")
++        self.assertEqual(response.meta["data_freshness"], "verified_live")
++        self.assertEqual(response.data.iloc[0]["trade_date"], "20260717")
++
++    def test_live_query_outside_window_is_explicitly_unverified(self):
++        raw = pd.DataFrame([{0: "000001", 1: "平安银行"}])
++
++        def market_query(provider, api_name, params, **kwargs):
++            if api_name == "trade_cal":
++                return self._result(pd.DataFrame([{"cal_date": "20260717", "is_open": 1}]))
++            return self._result(pd.DataFrame())
++
++        service = KaipanlaBiddingService(
++            repository=self.repo,
++            client=KaipanlaClient(fetch_page=self._raw_fetch(raw)),
++            market_query=market_query,
+             china_now=lambda: datetime(2026, 7, 17, 15, 0, tzinfo=ZoneInfo("Asia/Shanghai")),
+         )
+-        response = service.query("morning_bidding", {"st": 20})
+-
++        response = service.query_live({"st": 20})
+         self.assertIsNone(response.meta["actual_trade_date"])
+         self.assertEqual(response.meta["data_freshness"], "unverified_realtime")
+         self.assertIn("未标注交易日", response.meta["warning"])
+         self.assertTrue(pd.isna(response.data.iloc[0]["trade_date"]))
+ 
++    def test_capture_rejects_empty_upstream_payload(self):
++        service = KaipanlaBiddingService(
++            repository=self.repo,
++            client=KaipanlaClient(fetch_page=self._raw_fetch(pd.DataFrame())),
++            market_query=lambda *args, **kwargs: self._result(pd.DataFrame()),
++        )
++        response = service.capture_snapshot(
++            trade_date="20260717", snapshot_time="2026-07-17 09:25:05"
++        )
++        self.assertIsNotNone(response.error)
++        self.assertIn("空", response.error)
++        self.assertFalse(self.repo.has_snapshot("20260717"))
+ 
+-    def test_limit_day_enrichment_handles_nullable_code_aliases(self):
+-        def market_query(provider, api_name, params, **kwargs):
+-            if api_name == "limit_step":
+-                return self._result(
+-                    pd.DataFrame([{
+-                        "ts_code": pd.NA,
+-                        "symbol": "000001",
+-                        "trade_date": "20260717",
+-                        "nums": "首板",
+-                    }]),
+-                    meta={"actual_trade_date": "20260717"},
+-                )
+-            if api_name == "kpl_list":
+-                return self._result(pd.DataFrame())
+-            raise AssertionError(api_name)
+-
+-        service = KaipanlaBiddingService(repository=self.repo, market_query=market_query)
+-        source = pd.DataFrame([{
+-            "ts_code": "000001.SZ",
+-            "limit_up_days": pd.NA,
+-        }])
+-
+-        enriched = service._merge_limit_days(source, "20260717")
+-
+-        self.assertEqual(enriched.iloc[0]["limit_up_days"], 1)
+-
+-
+-    def test_history_prefers_snapshot_and_never_calls_tushare(self):
+-        saved = self.repo.save_snapshot(
+-            trade_date="20260717",
+-            snapshot_time="2026-07-17 09:25:05",
+-            source_params={"st": 1000},
+-            raw_payload={"pages": []},
+-            normalized_data=[{"ts_code": "000001.SZ", "name": "平安银行"}],
+-        )
+-
+-        def market_query(*args, **kwargs):
+-            raise AssertionError("snapshot exists; Tushare must not be called")
+-
+-        service = KaipanlaBiddingService(repository=self.repo, market_query=market_query)
+-        response = service.query("morning_bidding_history", {"trade_date": "20260717"})
+-
+-        self.assertIsNone(response.error)
+-        self.assertEqual(response.meta["source_provider"], "kaipanla_snapshot")
+-        self.assertEqual(response.meta["snapshot_id"], saved.snapshot.snapshot_id)
+-        self.assertEqual(response.data.iloc[0]["snapshot_id"], saved.snapshot.snapshot_id)
+-        self.assertFalse(response.meta["fallback_used"])
+-
+-    def test_history_can_read_the_exact_snapshot_id_used_by_a_card(self):
++    def test_history_can_read_exact_snapshot_id_when_same_day_has_multiple_payloads(self):
+         first = self.repo.save_snapshot(
+-            trade_date="20260717",
+-            snapshot_time="2026-07-17 09:25:05",
+-            source_params={},
+-            raw_payload={"version": 1},
+-            normalized_data=[{"ts_code": "000001.SZ", "name": "第一批"}],
++            trade_date="20260717", snapshot_time="2026-07-17 09:25:05", source_params={},
++            raw_payload={"version": 1}, normalized_data=[{"ts_code": "000001.SZ", "name": "第一批"}],
+         )
+         second = self.repo.save_snapshot(
+-            trade_date="20260717",
+-            snapshot_time="2026-07-17 09:25:35",
+-            source_params={},
+-            raw_payload={"version": 2},
+-            normalized_data=[{"ts_code": "000001.SZ", "name": "第二批"}],
++            trade_date="20260717", snapshot_time="2026-07-17 09:25:35", source_params={},
++            raw_payload={"version": 2}, normalized_data=[{"ts_code": "000001.SZ", "name": "第二批"}],
+         )
+         self.assertNotEqual(first.snapshot.snapshot_id, second.snapshot.snapshot_id)
+-
+-        service = KaipanlaBiddingService(
+-            repository=self.repo,
+-            market_query=lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError()),
+-        )
+-        response = service.query(
+-            "morning_bidding_history",
+-            {"snapshot_id": first.snapshot.snapshot_id},
+-        )
+-
+-        self.assertIsNone(response.error)
+-        self.assertEqual(response.meta["snapshot_id"], first.snapshot.snapshot_id)
+-        self.assertEqual(response.data.iloc[0]["name"], "第一批")
++        service = KaipanlaBiddingService(repository=self.repo, market_query=lambda *a, **k: (_ for _ in ()).throw(AssertionError()))
++        response = service.query_history({"snapshot_id": second.snapshot.snapshot_id})
++        self.assertEqual(response.data.iloc[0]["name"], "第二批")
+         self.assertEqual(response.meta["data_freshness"], "exact_snapshot_id")
+ 
+-
+-    def test_non_trading_date_uses_latest_saved_snapshot_on_or_before_request(self):
++    def test_requested_non_trading_date_uses_canonical_snapshot_on_or_before(self):
+         self.repo.save_snapshot(
+-            trade_date="20260717",
+-            snapshot_time="2026-07-17 09:25:05",
+-            source_params={},
+-            raw_payload={},
++            trade_date="20260717", snapshot_time="2026-07-17 09:25:05", source_params={}, raw_payload={},
+             normalized_data=[{"ts_code": "000001.SZ"}],
+         )
+-        service = KaipanlaBiddingService(
+-            repository=self.repo,
+-            market_query=lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError()),
+-        )
++        service = KaipanlaBiddingService(repository=self.repo, market_query=lambda *a, **k: (_ for _ in ()).throw(AssertionError()))
++        response = service.query_history({"trade_date": "20260719"})
++        self.assertEqual(response.meta["actual_trade_date"], "20260717")
++        self.assertEqual(response.meta["data_freshness"], "latest_snapshot_on_or_before")
+ 
+-        response = service.query("morning_bidding_history", {"trade_date": "20260719"})
++    def test_no_snapshot_resolves_latest_open_date_before_tushare_fallback(self):
++        calls = []
++        def market_query(provider, api_name, params, **kwargs):
++            calls.append((api_name, dict(params)))
++            if api_name == "trade_cal":
++                return self._result(pd.DataFrame([
++                    {"cal_date": "20260717", "is_open": 1},
++                    {"cal_date": "20260718", "is_open": 0},
++                    {"cal_date": "20260719", "is_open": 0},
++                ]))
++            if api_name == "stk_auction_o":
++                self.assertEqual(params["trade_date"], "20260717")
++                return self._result(pd.DataFrame([{"ts_code": "000001.SZ", "trade_date": "20260717", "price": 12.35}]), meta={"actual_trade_date": "20260717"})
++            return self._result(pd.DataFrame())
++        service = KaipanlaBiddingService(repository=self.repo, market_query=market_query)
++        response = service.query_history({"trade_date": "20260719"})
++        self.assertIsNone(response.error)
++        self.assertEqual(response.meta["fallback_reason"], "kaipanla_snapshot_not_found")
++        self.assertEqual(response.meta["data_freshness"], "tushare_historical_fallback")
++        self.assertEqual(response.meta["actual_trade_date"], "20260717")
++        self.assertIn("无法还原", response.meta["warning"])
+ 
+-        self.assertEqual(response.meta["requested_trade_date"], "20260719")
+-        self.assertEqual(response.meta["actual_trade_date"], "20260717")
+-        self.assertTrue(response.meta["fallback_used"])
+-        self.assertEqual(response.meta["data_freshness"], "latest_snapshot")
+-
+-    def test_no_snapshot_falls_back_to_tushare_with_partial_quality(self):
+-        def market_query(provider, api_name, params, **kwargs):
+-            if api_name == "trade_cal":
+-                return self._result(pd.DataFrame([{
+-                    "cal_date": "20260717", "is_open": 1,
+-                }]))
+-            if api_name == "stk_auction_o":
+-                return self._result(
+-                    pd.DataFrame([{
+-                        "ts_code": "000001.SZ", "trade_date": "20260717",
+-                        "price": 12.35, "amount": 36_000_000,
+-                    }]),
+-                    meta={"actual_trade_date": "20260717", "fallback_used": False},
+-                )
+-            if api_name == "bak_basic":
+-                return self._result(pd.DataFrame([{
+-                    "ts_code": "000001.SZ", "name": "平安银行", "industry": "银行",
+-                }]))
+-            if api_name == "limit_step":
+-                return self._result(pd.DataFrame([{
+-                    "ts_code": "000001.SZ", "trade_date": "20260717", "nums": "2",
+-                }]), meta={"actual_trade_date": "20260717"})
+-            if api_name == "kpl_list":
+-                return self._result(pd.DataFrame())
+-            raise AssertionError(api_name)
+-
+-        service = KaipanlaBiddingService(repository=self.repo, market_query=market_query)
+-        response = service.query("morning_bidding_history", {"trade_date": "20260717"})
+-
+-        self.assertIsNone(response.error)
+-        row = response.data.iloc[0]
+-        self.assertEqual(row["name"], "平安银行")
+-        self.assertEqual(row["limit_up_days"], 2)
+-        self.assertEqual(row["source_provider"], "tushare")
+-        self.assertEqual(row["data_quality"], "partial")
+-        self.assertTrue(response.meta["fallback_used"])
+-        self.assertEqual(response.meta["fallback_reason"], "kaipanla_snapshot_not_found")
+-        self.assertTrue(pd.isna(row["limit_buy_amount"]))
+-
+-    def test_no_snapshot_stops_when_latest_trade_date_cannot_be_verified(self):
++    def test_no_snapshot_stops_when_trade_calendar_is_unknown(self):
+         calls = []
+-
+         def market_query(provider, api_name, params, **kwargs):
+             calls.append(api_name)
+             if api_name == "trade_cal":
+                 return self._result(error="trade calendar unavailable")
+-            if api_name == "stk_auction_o":
+-                raise AssertionError("unverified date must not be queried")
+-            raise AssertionError(api_name)
+-
+-        service = KaipanlaBiddingService(repository=self.repo, market_query=market_query)
+-        response = service.query("morning_bidding_history", {"trade_date": "20260719"})
+-
+-        self.assertIsNotNone(response.error)
++            raise AssertionError("unverified date must not be queried")
++        response = KaipanlaBiddingService(repository=self.repo, market_query=market_query).query_history({"trade_date": "20260719"})
+         self.assertIn("无法确认最近交易日", response.error)
+         self.assertNotIn("stk_auction_o", calls)
+         self.assertIsNone(response.meta["actual_trade_date"])
+ 
+ 
+-
+ if __name__ == "__main__":
+     unittest.main()
+--- a/tests/test_kaipanla_snapshot_scheduler.py
++++ b/tests/test_kaipanla_snapshot_scheduler.py
+@@ -43,8 +43,11 @@
+         self.open_day = True
+         self.calls = []
+ 
++    def get_open_date_status(self, trade_date):
++        return "unknown" if self.open_day is None else ("open" if self.open_day else "closed")
++
+     def is_open_date(self, trade_date):
+-        return self.open_day
++        return bool(self.open_day)
+ 
+     def capture_snapshot(self, **kwargs):
+         self.calls.append(kwargs)
+@@ -107,6 +110,13 @@
+         self.assertEqual(result["status"], "market_closed")
+         self.assertFalse(self.service.calls)
+ 
++    def test_unknown_calendar_status_is_not_misreported_as_closed(self):
++        self.service.open_day = None
++        now = datetime(2026, 7, 18, 9, 25, 10, tzinfo=self.tz)
++        result = self.scheduler.run_once(now=now)
++        self.assertEqual(result["status"], "calendar_error")
++        self.assertFalse(self.service.calls)
++
+     def test_existing_snapshot_or_lease_conflict_prevents_duplicate_capture(self):
+         now = datetime(2026, 7, 17, 9, 25, 10, tzinfo=self.tz)
+         self.repo.exists = True
+--- a/tests/test_kaipanla_v2_repository.py
++++ b/tests/test_kaipanla_v2_repository.py
+@@ -30,12 +30,13 @@
+     assert second.snapshot.snapshot_id == first.snapshot.snapshot_id
+ 
+ 
+-def test_first_snapshot_of_trade_date_is_immutable_against_evening_overwrite(tmp_path):
++def test_first_snapshot_remains_canonical_when_later_immutable_payload_is_saved(tmp_path):
+     r = repo(tmp_path)
+     first = r.save_snapshot(trade_date="20260714", snapshot_time="2026-07-14 09:25:05", source_params={}, raw_payload=[row(1)], normalized_data=[row(1)])
+     evening = r.save_snapshot(trade_date="20260714", snapshot_time="2026-07-14 18:00:00", source_params={}, raw_payload=[row(999)], normalized_data=[row(999)])
+     loaded = r.get_snapshot("20260714")
+-    assert evening.created is False
++    assert evening.created is True
++    assert evening.snapshot.snapshot_id != first.snapshot.snapshot_id
+     assert loaded.snapshot_id == first.snapshot.snapshot_id
+     assert loaded.normalized_data[0]["10"] == 1
+ 
+@@ -63,10 +64,10 @@
+     assert r.acquire_lease("capture:20260714", "worker-b", 60, now=now.replace(minute=27)) is True
+ 
+ 
+-def test_concurrent_snapshot_writers_create_only_one_canonical_row(tmp_path):
++def test_concurrent_same_payload_writers_create_only_one_row(tmp_path):
+     r = repo(tmp_path)
+     def save(n):
+-        return r.save_snapshot(trade_date="20260714", snapshot_time=f"2026-07-14 09:25:{n:02d}", source_params={}, raw_payload=[row(n)], normalized_data=[row(n)])
++        return r.save_snapshot(trade_date="20260714", snapshot_time=f"2026-07-14 09:25:{n:02d}", source_params={}, raw_payload=[row(1)], normalized_data=[row(1)])
+     with ThreadPoolExecutor(max_workers=4) as pool:
+         results = list(pool.map(save, range(4)))
+     assert sum(x.created for x in results) == 1
+--- a/tests/test_kaipanla_v2_service.py
++++ b/tests/test_kaipanla_v2_service.py
+@@ -57,8 +57,12 @@
+ def test_no_snapshot_falls_back_to_tushare_partial_with_null_kaipanla_fields(tmp_path):
+     r = make_repo(tmp_path)
+     def market_query(provider, api, params, **kwargs):
+-        assert provider == "tushare" and api == "stk_auction_o"
+-        return ProviderResponse(data=pd.DataFrame([{"ts_code":"000001.SZ","name":"平安银行","price":12.3,"pre_close":12.0,"amount":1000,"trade_date":"20260714"}]), meta={"actual_trade_date":"20260714"})
++        assert provider == "tushare"
++        if api == "trade_cal":
++            return ProviderResponse(data=pd.DataFrame([{"cal_date":"20260714","is_open":1}]))
++        if api == "stk_auction_o":
++            return ProviderResponse(data=pd.DataFrame([{"ts_code":"000001.SZ","name":"平安银行","price":12.3,"pre_close":12.0,"amount":1000,"trade_date":"20260714"}]), meta={"actual_trade_date":"20260714"})
++        return ProviderResponse(data=pd.DataFrame())
+     svc = KaipanlaBiddingService(repository=r, market_query=market_query)
+     result = svc.query_history({"trade_date":"20260714"})
+     assert result.error is None
+--- a/tests/test_feishu_bidding_schema_v2.py
++++ b/tests/test_feishu_bidding_schema_v2.py
+@@ -0,0 +1,52 @@
++# -*- coding: utf-8 -*-
++from __future__ import annotations
++
++from types import SimpleNamespace
++
++from integrations.feishu.bitable import BIDDING_FIELD_SPECS, FeishuBitableManager
++
++
++def manager_without_init():
++    manager = FeishuBitableManager.__new__(FeishuBitableManager)
++    manager.bidding_app_token = "app"
++    manager.bidding_table_id = "table"
++    manager._bidding_schema_checked = False
++    return manager
++
++
++def test_bidding_schema_requires_stock_code_as_text_and_signed_amounts_as_number():
++    assert BIDDING_FIELD_SPECS["股票代码"].type == 1
++    assert BIDDING_FIELD_SPECS["原始字段15"].type == 2
++    assert BIDDING_FIELD_SPECS["主力卖出"].type == 2
++    assert BIDDING_FIELD_SPECS["主力卖出额"].type == 2
++    assert BIDDING_FIELD_SPECS["主力资金关系校验"].type == 7
++
++
++def test_check_schema_creates_only_missing_fields_and_reports_type_conflicts(monkeypatch):
++    manager = manager_without_init()
++    existing = {
++        "股票代码": {"field_name": "股票代码", "type": 2},
++        "股票名称": {"field_name": "股票名称", "type": 1},
++    }
++    created = []
++    monkeypatch.setattr(manager, "list_fields", lambda **kwargs: existing)
++    monkeypatch.setattr(manager, "create_field", lambda spec, **kwargs: created.append(spec.name) or True)
++    report = manager.check_bidding_schema(create_missing=True)
++    assert any(item["field_name"] == "股票代码" for item in report["type_mismatches"])
++    assert "股票代码" not in created
++    assert "原始字段10" in created
++    assert report["ok"] is False
++
++
++def test_ensure_schema_raises_instead_of_sending_fields_to_incompatible_table(monkeypatch):
++    manager = manager_without_init()
++    monkeypatch.setattr(manager, "check_bidding_schema", lambda **kwargs: {
++        "ok": False, "missing": [], "created": [],
++        "type_mismatches": [{"field_name": "股票代码"}], "errors": [],
++    })
++    try:
++        manager.ensure_bidding_schema(create_missing=True)
++    except RuntimeError as exc:
++        assert "股票代码" in str(exc)
++    else:
++        raise AssertionError("schema mismatch must stop sync")
+--- a/tests/test_feishu_bidding_sync_v2.py
++++ b/tests/test_feishu_bidding_sync_v2.py
+@@ -0,0 +1,51 @@
++# -*- coding: utf-8 -*-
++from __future__ import annotations
++
++from datetime import datetime
++from types import SimpleNamespace
++from zoneinfo import ZoneInfo
++
++import pandas as pd
++
++import services.feishu_sync_service as sync_service
++
++
++def test_bidding_sync_uses_shanghai_date_and_rejects_tushare_partial(monkeypatch):
++    captured = {}
++    class Service:
++        def query_history(self, params):
++            captured.update(params)
++            return SimpleNamespace(
++                error=None,
++                data=pd.DataFrame([{"股票代码": "000001", "source_provider": "tushare", "data_quality": "partial"}]),
++                meta={"source_provider": "tushare", "data_quality": "partial", "fallback_used": True},
++            )
++    monkeypatch.setattr(sync_service, "get_bitable_manager", lambda: (_ for _ in ()).throw(AssertionError("must not write partial fallback")))
++    monkeypatch.setattr(sync_service, "_china_now", lambda: datetime(2026, 7, 17, 20, 0, tzinfo=ZoneInfo("Asia/Shanghai")))
++    monkeypatch.setattr("services.kaipanla_bidding_service.get_kaipanla_bidding_service", lambda: Service())
++    result = sync_service.sync_bidding_to_feishu()
++    assert captured["trade_date"] == "20260717"
++    assert result == (0, 0)
++
++
++def test_bidding_sync_checks_schema_before_writing(monkeypatch):
++    order = []
++    class Service:
++        def query_history(self, params):
++            return SimpleNamespace(
++                error=None,
++                data=pd.DataFrame([{"股票代码": "000001", "source_provider": "kaipanla", "data_quality": "complete"}]),
++                meta={"source_provider": "kaipanla_snapshot", "data_quality": "complete", "fallback_used": False},
++            )
++    class Bitable:
++        def ensure_bidding_schema(self, create_missing=True):
++            order.append("schema")
++            return {"ok": True}
++        def batch_add_bidding_records(self, rows):
++            order.append("write")
++            return len(rows), 0
++    monkeypatch.setattr(sync_service, "get_bitable_manager", lambda: Bitable())
++    monkeypatch.setattr(sync_service, "_china_now", lambda: datetime(2026, 7, 17, 20, 0, tzinfo=ZoneInfo("Asia/Shanghai")))
++    monkeypatch.setattr("services.kaipanla_bidding_service.get_kaipanla_bidding_service", lambda: Service())
++    assert sync_service.sync_bidding_to_feishu() == (1, 0)
++    assert order == ["schema", "write"]
+--- a/tests/test_feishu_bidding_schema_tool.py
++++ b/tests/test_feishu_bidding_schema_tool.py
+@@ -0,0 +1,28 @@
++# -*- coding: utf-8 -*-
++from __future__ import annotations
++
++import tools.check_feishu_bidding_schema as tool
++
++
++class Manager:
++    def __init__(self):
++        self.apply = None
++    def check_bidding_schema(self, *, create_missing=False):
++        self.apply = create_missing
++        return {"ok": True, "missing": [], "created": []}
++
++
++def test_schema_tool_is_dry_run_by_default(monkeypatch, capsys):
++    manager = Manager()
++    monkeypatch.setattr(tool, "get_bitable_manager", lambda: manager)
++    assert tool.main([]) == 0
++    assert manager.apply is False
++    assert '"mode": "dry-run"' in capsys.readouterr().out
++
++
++def test_schema_tool_apply_creates_missing_fields(monkeypatch, capsys):
++    manager = Manager()
++    monkeypatch.setattr(tool, "get_bitable_manager", lambda: manager)
++    assert tool.main(["--apply"]) == 0
++    assert manager.apply is True
++    assert '"mode": "apply"' in capsys.readouterr().out
+--- a/tools/check_feishu_bidding_schema.py
++++ b/tools/check_feishu_bidding_schema.py
+@@ -0,0 +1,38 @@
++# -*- coding: utf-8 -*-
++"""Inspect or compatibly extend the Feishu Kaipanla bidding table schema."""
++from __future__ import annotations
++
++import argparse
++import json
++import sys
++from pathlib import Path
++
++if __package__ in {None, ""}:
++    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++
++from integrations.feishu.bitable import get_bitable_manager
++
++
++def build_parser() -> argparse.ArgumentParser:
++    parser = argparse.ArgumentParser(
++        description="检查飞书竞价表字段；默认只读，--apply 仅新增缺失字段，不修改或删除现有字段。"
++    )
++    parser.add_argument("--apply", action="store_true", help="创建缺失字段")
++    return parser
++
++
++def main(argv: list[str] | None = None) -> int:
++    args = build_parser().parse_args(argv)
++    try:
++        report = get_bitable_manager().check_bidding_schema(create_missing=args.apply)
++    except Exception as exc:
++        report = {"ok": False, "mode": "apply" if args.apply else "dry-run", "error": str(exc)}
++        print(json.dumps(report, ensure_ascii=False, indent=2))
++        return 2
++    report["mode"] = "apply" if args.apply else "dry-run"
++    print(json.dumps(report, ensure_ascii=False, indent=2))
++    return 0 if report.get("ok") else 2
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+--- a/check_feishu_bidding_schema.bat
++++ b/check_feishu_bidding_schema.bat
+@@ -0,0 +1,5 @@
++@echo off
++setlocal
++cd /d "%~dp0"
++python tools\check_feishu_bidding_schema.py %*
++exit /b %errorlevel%
+--- a/REPLACE_INSTRUCTIONS_V3.md
++++ b/REPLACE_INSTRUCTIONS_V3.md
+@@ -0,0 +1,29 @@
++# 开盘啦生产加固补丁 V3 替换说明
++
++1. 备份当前项目目录和 SQLite 数据库。
++2. 将本 ZIP 解压到 `stock_server` 项目根目录，保持目录结构并覆盖同名文件。
++3. 不要用补丁内文件覆盖生产 `.env`；本补丁不包含 `.env`。
++4. 安装依赖后运行：
++
++```bash
++python -m pytest
++python -m compileall -q -x '(^|/)(\.venv|venv|__pycache__|\.pytest_cache)(/|$)' .
++```
++
++5. 飞书上线前先运行：
++
++```bash
++python tools/check_feishu_bidding_schema.py
++python tools/check_feishu_bidding_schema.py --apply
++```
++
++6. 重启 Web 服务和独立快照/飞书 Worker。
++
++新增环境变量：
++
++```dotenv
++FEISHU_BIDDING_AUTO_CREATE_FIELDS=true
++FEISHU_BIDDING_ALLOW_TUSHARE_FALLBACK=false
++```
++
++默认行为是不把 Tushare partial 降级数据写入开盘啦飞书表。

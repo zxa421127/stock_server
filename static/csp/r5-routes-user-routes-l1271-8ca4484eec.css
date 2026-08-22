@@ -1,0 +1,49 @@
+/* migrated from routes/user_routes.py:1271 */
+html { scroll-behavior: smooth; }
+        .api-doc-page { max-width: 1500px; }
+        .api-doc-toolbar { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap; }
+        .doc-kpis { display:flex; flex-wrap:wrap; gap:8px; max-width:760px; }
+        .doc-kpis span { background:#f5f7fa; border:1px solid #dde3ea; border-radius:8px; padding:8px 11px; white-space:nowrap; }
+        .doc-kpis b { font-size:18px; color:#17365d; }
+        .api-doc-controls { position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; align-items:center; gap:8px; background:#fff; border:1px solid #dfe5eb; padding:10px; margin:18px 0; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+        .api-doc-controls input { flex:1; min-width:300px; padding:9px 12px; border:1px solid #b8c2cc; border-radius:6px; }
+        .filter-btn { border:1px solid #9ca8b5; background:#fff; padding:8px 12px; border-radius:6px; cursor:pointer; }
+        .filter-btn.active { background:#17365d; color:#fff; border-color:#17365d; }
+        .api-doc-layout { display:flex; align-items:flex-start; gap:24px; }
+        .api-doc-sidebar { position:sticky; top:72px; width:330px; min-width:330px; max-height:calc(100vh - 90px); overflow:auto; border:1px solid #e1e5ea; border-radius:8px; padding:14px; background:#fbfcfd; }
+        .nav-category { margin:8px 0; }
+        .nav-category summary { cursor:pointer; font-weight:bold; color:#17365d; }
+        .nav-category summary span { float:right; color:#666; font-weight:normal; }
+        .nav-category ul { list-style:none; padding-left:12px; margin:6px 0 12px; }
+        .doc-nav-endpoint { margin:6px 0; font-size:13px; line-height:1.35; }
+        .doc-nav-endpoint code { color:#1f4e78; }
+        .api-doc-main { max-width:1050px; width:100%; min-width:0; }
+        .doc-category-header { margin:24px 0 12px; padding:16px 18px; background:#eef4f9; border-left:5px solid #1f4e78; border-radius:6px; }
+        .doc-category-header h2 { margin:0; }
+        .category-count { display:inline-block; font-size:14px; background:#1f4e78; color:#fff; border-radius:14px; padding:2px 9px; vertical-align:middle; }
+        .doc-section { margin-bottom:24px; scroll-margin-top:82px; }
+        .endpoint-card { border:1px solid #dfe4ea; border-radius:8px; padding:20px; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+        .endpoint-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+        .endpoint-title-row h3 { margin-top:0; word-break:break-word; }
+        .back-top { font-size:13px; white-space:nowrap; }
+        .badges { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 12px; }
+        .badge { display:inline-block; padding:3px 8px; border-radius:12px; font-size:12px; border:1px solid transparent; }
+        .permission-general { background:#d9eaf7; color:#17365d; border-color:#aac7dd; }
+        .permission-special { background:#fce4d6; color:#9c5700; border-color:#e5b99f; }
+        .status-ok { background:#e2f0d9; color:#375623; border-color:#b8d6a5; }
+        .status-unverified { background:#eeeeee; color:#595959; border-color:#c9c9c9; }
+        .status-warn { background:#f4cccc; color:#9c0006; border-color:#e0a4a4; }
+        .badge-method { background:#f2f2f2; color:#333; border-color:#d0d0d0; }
+        .doc-description { white-space:normal; line-height:1.75; background:#fafafa; padding:12px; border-radius:6px; }
+        .endpoint-table { width:100%; table-layout:fixed; }
+        .endpoint-table th { width:115px; }
+        .endpoint-table td, .endpoint-table code { word-break:break-all; }
+        .code-details { margin:10px 0; border:1px solid #e1e5ea; border-radius:6px; overflow:hidden; }
+        .code-details summary { cursor:pointer; font-weight:bold; padding:9px 12px; background:#f6f8fa; }
+        .code-details pre { margin:0; border-radius:0; overflow:auto; }
+        .doc-empty { padding:30px; border:1px dashed #bbb; text-align:center; color:#666; }
+        @media (max-width: 980px) {
+            .api-doc-layout { display:block; }
+            .api-doc-sidebar { position:relative; top:auto; width:auto; min-width:0; max-height:420px; margin-bottom:20px; }
+            .api-doc-controls { position:relative; }
+        }

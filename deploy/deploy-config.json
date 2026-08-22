@@ -1,0 +1,37 @@
+{
+  "schema": "stock-server-bluegreen-v1",
+  "source_root": "C:\\stockdata\\stock_server_test",
+  "legacy_production_root": "C:\\stockdata\\stock_server",
+  "production_root": "C:\\stockdata\\production",
+  "blue_path": "C:\\stockdata\\production\\blue\\stock_server",
+  "green_path": "C:\\stockdata\\production\\green\\stock_server",
+  "state_root": "C:\\stockdata\\state",
+  "backup_root": "C:\\stockdata\\backup",
+  "maintenance_root": "C:\\stockdata\\maintenance",
+  "tasks": {
+    "legacy": "\\StockData-Web",
+    "blue": "\\StockData-Web-Blue",
+    "green": "\\StockData-Web-Green"
+  },
+  "ports": {
+    "test": 8898,
+    "public": 8899,
+    "blue": 8901,
+    "green": 8902
+  },
+  "host": "127.0.0.1",
+  "copy_exclude_top_level": [
+    ".venv",
+    ".git",
+    "__pycache__",
+    "data",
+    "data-test",
+    "logs",
+    "security",
+    "backup",
+    "backups",
+    "maintenance",
+    "packages",
+    "production"
+  ]
+}

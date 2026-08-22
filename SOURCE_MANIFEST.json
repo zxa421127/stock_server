@@ -1,0 +1,2025 @@
+{
+  "package_type": "development-source",
+  "files": [
+    {
+      "path": ".editorconfig",
+      "size": 189,
+      "sha256": "37170c33442d69e47e0bb45f163b01583e128f9f64bbaf6f350be05e9e783a58"
+    },
+    {
+      "path": ".env.example",
+      "size": 31574,
+      "sha256": "27481714acac9892bb082c09cff929130bf8f5940372131800313979883e1717"
+    },
+    {
+      "path": ".gitattributes",
+      "size": 182,
+      "sha256": "13878e80b62beb8d5379bbdfeb0d3f2f94eb781a2ea2d70fb90bd319a6793894"
+    },
+    {
+      "path": ".github/workflows/security.yml",
+      "size": 873,
+      "sha256": "3dfc33a9ce8f3aab5565b8d5532c273f6129e05de0bd6b69d67d2b1001bcb4dd"
+    },
+    {
+      "path": ".gitignore",
+      "size": 500,
+      "sha256": "4d4d560f8f71d8a7e77af051ab17fe673e7fe5ffaa4cf411511c07ada2ccee8c"
+    },
+    {
+      "path": "app.py",
+      "size": 19177,
+      "sha256": "7fe6ab18ea941f1a25bbf216ae436b5cf36ced138e3c77990bbaa17ad99288d3"
+    },
+    {
+      "path": "config.py",
+      "size": 28320,
+      "sha256": "a613a27b06c049b8805ff9b3a1351f3aae33b09651c2a68ff551793e9ac6b5bf"
+    },
+    {
+      "path": "db_utils.py",
+      "size": 48687,
+      "sha256": "de0f3e31b6cf1924261fdfdd07803d171b6186f10a9596babf1bc35021d7f027"
+    },
+    {
+      "path": "deploy/nginx/stock-server.conf",
+      "size": 4971,
+      "sha256": "a6b00b9987f9eec5f62681f197d7e150fadd9e06a32aec590660d01be52d7a00"
+    },
+    {
+      "path": "deploy/systemd/stock-admin-api-test-worker.service",
+      "size": 576,
+      "sha256": "d54749342a6f8b28c0feca7f19c6be75c93473dd8e0d9e6725ef4b0a96f16960"
+    },
+    {
+      "path": "deploy/systemd/stock-api-doc-status.service",
+      "size": 526,
+      "sha256": "88ecbeebf434b37388f27a29f75f557089cf4632fc28c4a4d655f138a17d7040"
+    },
+    {
+      "path": "deploy/systemd/stock-audit-cleanup.service",
+      "size": 514,
+      "sha256": "4ca3c8f5b3ba98bee32ef556d36c9e9ecf9c73ead80b67e645997dff1d842738"
+    },
+    {
+      "path": "deploy/systemd/stock-feishu-worker.service",
+      "size": 527,
+      "sha256": "6d7f29ee438e0a4bf7fb49df75f5a53ae43d0503a4524c3e9e34d231a1633f0d"
+    },
+    {
+      "path": "deploy/systemd/stock-kaipanla-snapshot.service",
+      "size": 544,
+      "sha256": "db3ad044698f9396734e3492770b69bcab63b4b0cd9542edaeb9c78fa9fc7a5c"
+    },
+    {
+      "path": "deploy/systemd/stock-tushare-spec-monitor.service",
+      "size": 586,
+      "sha256": "b0cb504dce6d7e37b0a8161663c6d0206bc65d97c27e0bbca097198a6a5ff6b3"
+    },
+    {
+      "path": "deploy/systemd/stock-web.service",
+      "size": 788,
+      "sha256": "d2f8c77ea0416b70d33462016e759428b0748c4f5da2fd99b0b4e25e447e5986"
+    },
+    {
+      "path": "deploy/windows/caddy/stock-server-four-hosts.Caddyfile",
+      "size": 3754,
+      "sha256": "ec7def67f4ffe512841c7a3f296fa61a1775804f63d93fca054e7a9a7b3ad7b2"
+    },
+    {
+      "path": "deploy/windows/create-service-account.ps1",
+      "size": 1718,
+      "sha256": "8f917f6adcc721ed50d9b5814c09241646326d8ef5603c926fdf05a8ebc6b788"
+    },
+    {
+      "path": "deploy/windows/environment-switch/env-overlays/production.env.overlay.example",
+      "size": 598,
+      "sha256": "af4b664236fc2f1883aa6caa1a19319dfd28ea34c900aba7cabe16e20a070a03"
+    },
+    {
+      "path": "deploy/windows/environment-switch/env-overlays/test.env.overlay.example",
+      "size": 638,
+      "sha256": "3897266d09afbcb7b033540ef10c795931c1ffe620fdeed777b42856e1952e1e"
+    },
+    {
+      "path": "deploy/windows/environment-switch/environment-map.psd1",
+      "size": 583,
+      "sha256": "69e78c69c03a3c19ca00a9ecc8559c2600b5ac87c65f4b54d92613b2aa16af6d"
+    },
+    {
+      "path": "deploy/windows/environment-switch/Get-StockEnvironmentStatus.ps1",
+      "size": 11757,
+      "sha256": "30ddc2102d10a5638bd87b36985715cf079831997c81300dba311872aad868bb"
+    },
+    {
+      "path": "deploy/windows/environment-switch/Switch-StockEnvironment.ps1",
+      "size": 19599,
+      "sha256": "ffd17dfa761d62fe8e56aa8aae39663198ad920a59505dc9bf1ddbc379be4052"
+    },
+    {
+      "path": "deploy/windows/install-dependencies.ps1",
+      "size": 2467,
+      "sha256": "39e8512a459b530c942d4a24e707cb64b6f924c24af0d644158f7c22a90ded23"
+    },
+    {
+      "path": "deploy/windows/nginx/stock-server.conf",
+      "size": 6448,
+      "sha256": "9811929f5b57a7832713d7ebdaec6523ea1a9fda5b22724fe77e1e042f3f5e4c"
+    },
+    {
+      "path": "deploy/windows/README.md",
+      "size": 2861,
+      "sha256": "fdd6fe90431fa3450e3d212aa84b9ff23110ec1d7938831793aeb0ce296b4e77"
+    },
+    {
+      "path": "deploy/windows/register-scheduled-tasks.ps1",
+      "size": 8169,
+      "sha256": "0602207a376ce24da578a0d95e89046b7931794ce7740278385eb17484702ea9"
+    },
+    {
+      "path": "deploy/windows/set-ntfs-permissions.ps1",
+      "size": 6239,
+      "sha256": "f00993f8d132fda71377f0336b10e47d7beff4130683066338aa3d62ebc2a8ea"
+    },
+    {
+      "path": "deploy/windows/verify-production.ps1",
+      "size": 2799,
+      "sha256": "2d0a91d60cf10f6e7739832b066b5e4903622f6a1b127c1fc2c717c7dfdbf130"
+    },
+    {
+      "path": "docs/architecture/admin-interface-tester-design.md",
+      "size": 25795,
+      "sha256": "343e567fef3b1301ea22b0d826b9e2027191d91d301cad74f8d0f7ea8dd87b41"
+    },
+    {
+      "path": "docs/architecture/project-layout.md",
+      "size": 1461,
+      "sha256": "e2e652c68c5d6c27804dab8d9d6a583771c7dd943f2570359b33f0f11f5b7a99"
+    },
+    {
+      "path": "docs/architecture/provider-architecture.md",
+      "size": 2332,
+      "sha256": "9d30c8d761c84f2737bac725b52367b145784ef24bdab9e793377d31a41d4118"
+    },
+    {
+      "path": "docs/ENVIRONMENT_SWITCH_CHANGELOG.md",
+      "size": 1749,
+      "sha256": "7b4e25ba4a017ef50033970dc641e1c23089049360f336e3161c294e13e84dd6"
+    },
+    {
+      "path": "docs/features/easy-interface-tester.md",
+      "size": 1732,
+      "sha256": "c608524e295b2f867f1151c82f9d49e59f587953227db3a9e82d6f16d401d8fa"
+    },
+    {
+      "path": "docs/features/feishu-kaipanla-field-mapping-v2.md",
+      "size": 3000,
+      "sha256": "c3973960c5f747d0afb8b2537229906a7e332ad1e45a0e3bd739387d1936b6dd"
+    },
+    {
+      "path": "docs/features/kaipanla-field-mapping-v2.md",
+      "size": 2919,
+      "sha256": "5148e5a89e2c7ef4fe66736516586b885e068d29f59962f3e0d342c0de443c41"
+    },
+    {
+      "path": "docs/features/membership.md",
+      "size": 928,
+      "sha256": "b6b644e7eae81903cad165cb7187fcd32864491e47cf22cbeabf2348329add8b"
+    },
+    {
+      "path": "docs/features/subscription-actions.md",
+      "size": 6442,
+      "sha256": "574514fe235a9b5cfd272eeb47fe8f66e8860ba1b0f5ef0fb42cc541b689f1c1"
+    },
+    {
+      "path": "docs/operations/admin-interface-tester-deployment.md",
+      "size": 6545,
+      "sha256": "885296e547cc54d539795817c7f82cc0a794d8007a225b9dcd218109892e335b"
+    },
+    {
+      "path": "docs/operations/ADMIN_MFA_TUSHARE_SYNC_RECOVERY.md",
+      "size": 405,
+      "sha256": "23042c00e0aab78880330dcbfdc2781bb592e13f0574d956d2bafebb8ff03d9b"
+    },
+    {
+      "path": "docs/operations/backup-and-restore.md",
+      "size": 528,
+      "sha256": "743c9e78c52efd1bfc0dd851b36a0185b467b538be9ce36247ea4d6bf0e0c991"
+    },
+    {
+      "path": "docs/operations/interface-tester-official-specs-deployment.md",
+      "size": 5447,
+      "sha256": "abcebe529cae93d616135fa1d0fed829c3e1e07db7de0f094ed08fa1d578af8b"
+    },
+    {
+      "path": "docs/operations/kaipanla-snapshot-deployment.md",
+      "size": 3471,
+      "sha256": "a9a476eba88dd1802e5537917c948f7c1c339750962c403dd745f6b0dc5da79e"
+    },
+    {
+      "path": "docs/operations/load-testing.md",
+      "size": 670,
+      "sha256": "495563cdfed307a75b865910cfc577e83b8dfa8262f404f8ccab6d0bcc8a5f29"
+    },
+    {
+      "path": "docs/operations/monitoring.md",
+      "size": 703,
+      "sha256": "e241b15b4aa0844bb1e4a9aa1f0d46b778fa345d762dff9848a2dcb99b9723a1"
+    },
+    {
+      "path": "docs/operations/performance-and-deployment.md",
+      "size": 4350,
+      "sha256": "c2450db1af08d71fc2732c7ded1da718fd4f3b306ba21b984c0173c602cd836c"
+    },
+    {
+      "path": "docs/operations/production-deployment.md",
+      "size": 1753,
+      "sha256": "5cece74b71ad18e82c49ff4b1ac4ddb057d65b600453f75b3265eff68304a5f7"
+    },
+    {
+      "path": "docs/operations/production-test-environment-switch.md",
+      "size": 23245,
+      "sha256": "e250cbabe2a1e4578044ae36c37d1b2047457e78d29f1b658c46b8e8bb6ac952"
+    },
+    {
+      "path": "docs/operations/required-manual-actions.md",
+      "size": 3132,
+      "sha256": "ea8e31eca4e748a8b29af938bc4682ed24f9c9666133ade06a8ee00d04557a08"
+    },
+    {
+      "path": "docs/operations/tushare-spec-monitor-deployment.md",
+      "size": 4221,
+      "sha256": "ee140a44f10aa38ef1056a0bbe1068013679f58ca5f60e63b0ae20c224c50903"
+    },
+    {
+      "path": "docs/operations/TUSHARE_OFFICIAL_SYNC_RECOVERY.md",
+      "size": 2868,
+      "sha256": "440c6ce58b191a3243fde3c984f258f8586916d393e30323f9868e82dfc9ef3e"
+    },
+    {
+      "path": "docs/operations/windows-production-installation.md",
+      "size": 5361,
+      "sha256": "cc1997656b698223abf102d5ad4d407923158ad9c6675d44ec3d0003a37b6fcf"
+    },
+    {
+      "path": "docs/operations/zero-to-one-production-installation.md",
+      "size": 12011,
+      "sha256": "c4d0d0f2b96434f07df57fc218d5e1422f1933b0f6a5df8ab368ea8f6de31812"
+    },
+    {
+      "path": "docs/README.md",
+      "size": 973,
+      "sha256": "0944dec58c2d9dd5e235d90f0f4cfe0b4623e306903d5e1771eb37f4f0f4f1bf"
+    },
+    {
+      "path": "docs/security/admin-client-certificate.md",
+      "size": 4733,
+      "sha256": "c2fc4f19f8fd3e92fd53648278ccf71cb3ddc81248c8a1609b08499f7b25c1b8"
+    },
+    {
+      "path": "docs/security/incident-response.md",
+      "size": 664,
+      "sha256": "5cb395bc8fd6ac05775837acb9ad99d9990e4500b75e466d1cad5344d7bff4e2"
+    },
+    {
+      "path": "docs/security/production-security.md",
+      "size": 2708,
+      "sha256": "b3d1de2e6faa5287204660a9632ee7a29d8ed1d4e1d9c414bff0d1eaa03bfa9e"
+    },
+    {
+      "path": "docs/security/release-security-cleanup.md",
+      "size": 1079,
+      "sha256": "fabc46e0c77ed05a4a18b14725afcdabcc6e785879b6f644f5132761ed64185b"
+    },
+    {
+      "path": "docs/security/secret-rotation.md",
+      "size": 889,
+      "sha256": "e1e8ea61dcf805cca913d255038a572a0a2c1ebc20b5264dd7a9131fa24ee400"
+    },
+    {
+      "path": "docs/SECURITY_REMEDIATION.md",
+      "size": 2158,
+      "sha256": "61856119ba466b3f698aae438fa2ac1d358731f7752eb2579e99ef39820e07b9"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-26-security-hardening.md",
+      "size": 8545,
+      "sha256": "cfeda6a913afb16174cfe6faf8dd9505e0f0578bd54562aef53003f35f9ea260"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-07-26-security-hardening-design.md",
+      "size": 3635,
+      "sha256": "8e610f72c70d6f63394e9cb6a53f321a138c3e04bf3b81ec9d7e15161ae9f355"
+    },
+    {
+      "path": "e2e_tests/01_deployment/run.bat",
+      "size": 1335,
+      "sha256": "fc0f92fac516a907f61e32bfc18514a4e6b40fca5a59868802648ea28721fdec"
+    },
+    {
+      "path": "e2e_tests/02_account_permissions/01_prepare_test_accounts.bat",
+      "size": 1641,
+      "sha256": "27433c5f44ddb34fcbf169d17ed10265375e64b0a247379c37fb299e0d6d6ae9"
+    },
+    {
+      "path": "e2e_tests/02_account_permissions/02_run_permission_matrix.bat",
+      "size": 1342,
+      "sha256": "265517846f4a112856a8d165b6a4a836d6b6badc00bd17187f02a19f77cea9b8"
+    },
+    {
+      "path": "e2e_tests/03_provider_catalog/run.bat",
+      "size": 1338,
+      "sha256": "cfb9f8c0042c2e90c9356fd0325b697e1ff2398ed12af7ce95f6ba1e3491a8d7"
+    },
+    {
+      "path": "e2e_tests/04_all_data_interfaces/run.bat",
+      "size": 1365,
+      "sha256": "5dd4ee5e6015525c8b7004f4f1f3ae3204effb48f3f05e489cb45109115b2b50"
+    },
+    {
+      "path": "e2e_tests/05_cache/run.bat",
+      "size": 1330,
+      "sha256": "9d93410974d3a30454d548db60a57ef7d60a5176907dd41e0e7a1889cb3fef6d"
+    },
+    {
+      "path": "e2e_tests/core/all_data_interfaces_test.py",
+      "size": 17839,
+      "sha256": "ead5efa9e6f91c96668441cf4d2957283ebd3b8cfe76c8c1922dff442afeb932"
+    },
+    {
+      "path": "e2e_tests/core/auto_tests/__init__.py",
+      "size": 50,
+      "sha256": "bed69d2af93bd12aac4b2e5c2d9747ed885ba559402dc00e76d5d9a594cae5d6"
+    },
+    {
+      "path": "e2e_tests/core/auto_tests/cache_test.py",
+      "size": 1570,
+      "sha256": "32ffd43bcd439c9bf25fbf5f97419763f3e96e06a58f489cd2edcfb34b74d871"
+    },
+    {
+      "path": "e2e_tests/core/auto_tests/catalog_count_test.py",
+      "size": 3223,
+      "sha256": "ac3dd121185282674ce2e6753548ab5dfaab5b775df4d5f0039ac21f4b91e694"
+    },
+    {
+      "path": "e2e_tests/core/auto_tests/common.py",
+      "size": 7312,
+      "sha256": "3cfddb8b324548e6309c40f7104b014b9346cb992e982709c4178743e512f7c8"
+    },
+    {
+      "path": "e2e_tests/core/auto_tests/deployment_test.py",
+      "size": 1461,
+      "sha256": "e4a286806f7befb81a8555ecbf7695cb80076f5623fb682a9ce686c7a6e434e5"
+    },
+    {
+      "path": "e2e_tests/core/auto_tests/full_interface_test.py",
+      "size": 1085,
+      "sha256": "42e86539d9721b3e387058026b36f377663dd72d4e47fca83b1703dbc3b17c69"
+    },
+    {
+      "path": "e2e_tests/core/auto_tests/permission_matrix_test.py",
+      "size": 4452,
+      "sha256": "b39d36a527ec9a807709e8d9d1f2267fa0cf5bc5b25a9c753fa419a41368fa5c"
+    },
+    {
+      "path": "e2e_tests/README.md",
+      "size": 430,
+      "sha256": "dab67b35a38102725c0608b1bdf392cc7f2e840ca9b56d7a8274446f7663227d"
+    },
+    {
+      "path": "e2e_tests/README_CN.txt",
+      "size": 1688,
+      "sha256": "baa9b7ed625f4edfccb390b3853958a034d06accee12b2f9c3fc0965377bb16c"
+    },
+    {
+      "path": "ENVIRONMENT_SWITCH_CHANGELOG.md",
+      "size": 1471,
+      "sha256": "8eee7dba71b45c6445e46e13eecd62f51a9072e4f6f256a656a4f2de73998462"
+    },
+    {
+      "path": "gunicorn.conf.py",
+      "size": 840,
+      "sha256": "ec2577052243de3c89fce6c9acabe96b17df7fe0f9fc278b2f481e1801ca902c"
+    },
+    {
+      "path": "integrations/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "integrations/feishu/__init__.py",
+      "size": 34,
+      "sha256": "bbbe4ede6feaa165cfeff289bb21a9d3eb12df284f694e7dbf6604099d02b793"
+    },
+    {
+      "path": "integrations/feishu/bitable.py",
+      "size": 21127,
+      "sha256": "6ead3ef2a2a2500cdbabd326c6f43b969b51bc61f151855c1b6b6ca6838ac7dd"
+    },
+    {
+      "path": "integrations/kaipanla/__init__.py",
+      "size": 8587,
+      "sha256": "a1e91cb236076859ee70b026de5c1fd805b607e0e77b8972c7ea8f5f7762b229"
+    },
+    {
+      "path": "integrations/kaipanla/morning_bidding.py",
+      "size": 2851,
+      "sha256": "76e70417e8c01a6553ad0e682f77ee4f274aee5e695c0422de960ce46be8ab00"
+    },
+    {
+      "path": "integrations/market_data/__init__.py",
+      "size": 123,
+      "sha256": "864fc19a168aef75e09cebf4548ac102b95c4fd9d452ae413652e4bb97a9c925"
+    },
+    {
+      "path": "integrations/market_data/base.py",
+      "size": 1441,
+      "sha256": "24183f7687c316d473298a34af90540e7f1dd740c9bb1666c1ea6165925379d8"
+    },
+    {
+      "path": "integrations/market_data/kaipanla/__init__.py",
+      "size": 309,
+      "sha256": "694cc83b03187de36bd39e21119386ff6a6d8ae3ea8227270af8cef0f7294dbb"
+    },
+    {
+      "path": "integrations/market_data/kaipanla/adapter.py",
+      "size": 11366,
+      "sha256": "e7a3cf4919b26fffa09bdfc8c1ea20053afc0c4fad64e0a979ef3b09dbe89bd2"
+    },
+    {
+      "path": "integrations/market_data/kaipanla/client.py",
+      "size": 6050,
+      "sha256": "285ac34c422642612a401a21ebcd7fc745e8ace8af18fc3d553d0b52845a7ad7"
+    },
+    {
+      "path": "integrations/market_data/kaipanla/provider.py",
+      "size": 1662,
+      "sha256": "9be0141bf8d4e60f3878645715087926207bcfd5de80e86ecc9b235f4188c472"
+    },
+    {
+      "path": "integrations/market_data/kaipanla/schema.py",
+      "size": 2078,
+      "sha256": "cffea0c72a46833ee5f0c1d2d571fed332cdec30bb04710a5c409e83254d81f3"
+    },
+    {
+      "path": "integrations/market_data/miniqmt/__init__.py",
+      "size": 110,
+      "sha256": "215d6b954603c72ab97002348b32f5baa368fcb0a4779149765518ad9bd2e05b"
+    },
+    {
+      "path": "integrations/market_data/miniqmt/adapter.py",
+      "size": 1368,
+      "sha256": "0b32951958d3383f070216d4ea884e0c386cd09cd5287358bd1ce6bc2541bff4"
+    },
+    {
+      "path": "integrations/market_data/miniqmt/client.py",
+      "size": 1930,
+      "sha256": "a93ebdb60956266546e801ba324209c135738b59ad6fc3f6fe14f9bb4c583c4c"
+    },
+    {
+      "path": "integrations/market_data/miniqmt/provider.py",
+      "size": 5168,
+      "sha256": "e2a49098d4c3a87410ab06e8a4e71545a74eb668b3bd2ccbc2f99cd120bdfe5a"
+    },
+    {
+      "path": "integrations/market_data/miniqmt/subscription_manager.py",
+      "size": 1421,
+      "sha256": "c659c9ae7ed50c630bb216b2722d0b6805cf11d46ce2ad7c1af0cb576081f49f"
+    },
+    {
+      "path": "integrations/market_data/registry.py",
+      "size": 2553,
+      "sha256": "de25c2ea37d06c94c78da0143c56884ff10eccdb2e24e1ead54e3dac7772a470"
+    },
+    {
+      "path": "integrations/market_data/tushare/__init__.py",
+      "size": 144,
+      "sha256": "aac542acb50b95ed4a158c6212267817d5d5e2e615ce8d4e37ea16a8e999312d"
+    },
+    {
+      "path": "integrations/market_data/tushare/catalog.py",
+      "size": 21635,
+      "sha256": "ef88ba09c0a77784fe09fdd84cc43ce46688397e2275ce8c05368619a9d5523d"
+    },
+    {
+      "path": "integrations/market_data/tushare/client.py",
+      "size": 12009,
+      "sha256": "dc3f8eee191897e240b8005c621142da3a24f099ccb6722115e5f3a7a1875ce5"
+    },
+    {
+      "path": "integrations/market_data/tushare/latest_available.py",
+      "size": 14767,
+      "sha256": "c767e43fe3a3b43311aec81861ce6778852241eda2b1bad38abab011b5e0cc91"
+    },
+    {
+      "path": "integrations/market_data/tushare/permissions.py",
+      "size": 2889,
+      "sha256": "1536d62f1b57fc4d99c742c225ec1850c8a55aa372b9e0691af3c406aebd561a"
+    },
+    {
+      "path": "integrations/market_data/tushare/provider.py",
+      "size": 2981,
+      "sha256": "5e29507e90c8590c012f9cd810120ffb286273418dd4d0d114b5637a15c3b21f"
+    },
+    {
+      "path": "interface_specs/current.json",
+      "size": 63,
+      "sha256": "5c41911e71b80f0c40375e4370356fb948dd089665b016b58b128d04906b234e"
+    },
+    {
+      "path": "interface_specs/README.md",
+      "size": 512,
+      "sha256": "19c2cccc5a5c01241b2c53e452cf5d7379a6f32e8aa81ecca0cda3b7f77c7f47"
+    },
+    {
+      "path": "interface_specs/releases/seed-20260724_kaipanla_triple_snapshot_v1/effective_specs.json",
+      "size": 724533,
+      "sha256": "92f1a36fdcb154254fb1f0e2e3d0ea602538dfa77101be2e44e0a2b18a977ad0"
+    },
+    {
+      "path": "interface_specs/releases/seed-20260724_kaipanla_triple_snapshot_v1/manifest.json",
+      "size": 275,
+      "sha256": "11e0324179c035349c8ba3a70c34a70eb7c1e2f2bc85606d4d8e5f93124e9400"
+    },
+    {
+      "path": "interface_specs/releases/spec-20260725-ci-daily-official-monitor-v4/effective_specs.json",
+      "size": 739192,
+      "sha256": "813283b11b2a229695564b729524d872ce2e1687b6443899beecfd7b227d8ff1"
+    },
+    {
+      "path": "interface_specs/releases/spec-20260725-ci-daily-official-monitor-v4/manifest.json",
+      "size": 443,
+      "sha256": "9763fbdfd4cd5f7ced2c779d4d110f7cf96656135bf6c5b7a1673d9da04262de"
+    },
+    {
+      "path": "interface_specs/releases/spec-20260725-official-bootstrap-v1/effective_specs.json",
+      "size": 737798,
+      "sha256": "3178df1c6419ea3d0c0e635f6641f61d805afd4fe296c2c8047d1a10e525765c"
+    },
+    {
+      "path": "interface_specs/releases/spec-20260725-official-bootstrap-v1/manifest.json",
+      "size": 885,
+      "sha256": "cc811d130ca1d1a3e11e48274e88594285718c29673bd131c8c19e32601ac6e5"
+    },
+    {
+      "path": "interface_specs/releases/spec-20260726-etf-index-official-sync-fix-v5/effective_specs.json",
+      "size": 740825,
+      "sha256": "e8a759101c8e3eeb1979712975c64495af4cec5c09d0f1e95d41606f0a0a3568"
+    },
+    {
+      "path": "interface_specs/releases/spec-20260726-etf-index-official-sync-fix-v5/manifest.json",
+      "size": 460,
+      "sha256": "bbdec8ed07d1a851f5c8f3ff28d8e72e1779c2f0928456de4e4688016eaac878"
+    },
+    {
+      "path": "middleware/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "middleware/auth.py",
+      "size": 7836,
+      "sha256": "c82e09e4b5b535223dba85718a97974fb22763e8177c404f7803c7afc82f779e"
+    },
+    {
+      "path": "pytest.ini",
+      "size": 143,
+      "sha256": "4572536a84a04137e265584766d1d0f68c710c09a27e9753de006f8be2690b8c"
+    },
+    {
+      "path": "README.md",
+      "size": 3061,
+      "sha256": "0c2b423101127f61f823c5d1195e8545238b5cf32ccc8de34d60b40f0bf7d91d"
+    },
+    {
+      "path": "requirements-dev.txt",
+      "size": 66,
+      "sha256": "80e63ce1a4bceea8eb2ba5878574ad03048dd64c17079a0eeded85c909ebcfa6"
+    },
+    {
+      "path": "requirements.lock",
+      "size": 556,
+      "sha256": "bd8fbca98d6503441c6f07f3892db7331d81c2edcff8349bb9e18b83d2517ed2"
+    },
+    {
+      "path": "requirements.txt",
+      "size": 292,
+      "sha256": "b711ef12ad2f716bbfa6a181bc1770c963d450ffc32464b330a90f159d19cc33"
+    },
+    {
+      "path": "routes/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "routes/admin_api_doc_routes.py",
+      "size": 39251,
+      "sha256": "8383ee9ef9db97419f909c4cf296c180c91c73b86fd8287678471d019c550260"
+    },
+    {
+      "path": "routes/admin_audit_routes.py",
+      "size": 27847,
+      "sha256": "0054b33fe218cc927003591edba557cc5d2a49fa5cdfdbfd76b31df909f81765"
+    },
+    {
+      "path": "routes/admin_market_test_routes.py",
+      "size": 28990,
+      "sha256": "a8a28cf43d802056824cbf83c7dcb2937e2a07a575c184a7c14ee6d4089847e0"
+    },
+    {
+      "path": "routes/admin_member_routes.py",
+      "size": 58282,
+      "sha256": "b0f64f11031e94a69e4e19c1d2a5523e87554fa74005928a66245945bb17c45f"
+    },
+    {
+      "path": "routes/admin_sync_routes.py",
+      "size": 2660,
+      "sha256": "355d255550c20a995894c2bb2e8e5b19173fedb044009572db5e5afe701ba288"
+    },
+    {
+      "path": "routes/admin_user_routes.py",
+      "size": 19122,
+      "sha256": "80f43d624520abb9abeea98146b404d61af1efd179806423581d7e1bb3d47acc"
+    },
+    {
+      "path": "routes/market_data_routes.py",
+      "size": 13147,
+      "sha256": "fe065059bbef3cf45e94c8f60684c401274b4f1d2e2749ac57df3203509d4e39"
+    },
+    {
+      "path": "routes/user_routes.py",
+      "size": 71461,
+      "sha256": "b9869c9e135c1ab175874433b4e79892c403de4c992d94ac8f5498ed571a3a98"
+    },
+    {
+      "path": "run_waitress.py",
+      "size": 694,
+      "sha256": "c22c5804c2203799017d5233737ce9f13f5a2826c91c94dfbf89e59a5b4d2798"
+    },
+    {
+      "path": "scripts/manual_tests/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scripts/manual_tests/manual_feishu_sync.py",
+      "size": 308,
+      "sha256": "20a3a8a39161319ea3d9742b71e407bd114c7db9fee59e1897964a24a112ccd8"
+    },
+    {
+      "path": "scripts/manual_tests/manual_tushare_chain.py",
+      "size": 746,
+      "sha256": "3a14a629d6adb019f089db0a81b009f622a74a229511336936a994f565eaee57"
+    },
+    {
+      "path": "scripts/windows/apply_developer_research_plans.bat",
+      "size": 219,
+      "sha256": "228b1ce3bf034ab0ee861ca25e09f7a19060549622ab384980a99c2be9604195"
+    },
+    {
+      "path": "scripts/windows/apply_two_tier_plans.bat",
+      "size": 735,
+      "sha256": "ed766ccd0a48dee416fb5afd77d1aa9a22130083caa577b8c736396453560da8"
+    },
+    {
+      "path": "scripts/windows/check_feishu_bidding_schema.bat",
+      "size": 467,
+      "sha256": "17d20902ccee6a1dc9d1572a54855af43cd964c15e4c772e97d183e19dc6da68"
+    },
+    {
+      "path": "scripts/windows/migrate_kaipanla_snapshots_v2.bat",
+      "size": 469,
+      "sha256": "7b22b6a736729fa5835e4ef3e4b45dc399e3d3fac932fd0316ccf8a1d33c2fd9"
+    },
+    {
+      "path": "scripts/windows/run_admin_api_test_worker.bat",
+      "size": 458,
+      "sha256": "36ead99312961ba70008def8fcfbdea0b2629398276541ffd719814ffa767498"
+    },
+    {
+      "path": "scripts/windows/run_interface_test.bat",
+      "size": 1077,
+      "sha256": "ed974fa69e49a46044ae7f39d218ecdaf12f8c36649305dabd853ba59eafcc72"
+    },
+    {
+      "path": "scripts/windows/run_membership_test.bat",
+      "size": 1179,
+      "sha256": "dd8e85a22814efc81819d4fa4f212618978e8f51ce9955951e6bfeba0f2225c9"
+    },
+    {
+      "path": "scripts/windows/run_subscription_action_tests.bat",
+      "size": 554,
+      "sha256": "d727654ee0096872a9277000f44554c749b5d143f6461cfb727aed30b741209a"
+    },
+    {
+      "path": "scripts/windows/start_stock_server.cmd",
+      "size": 839,
+      "sha256": "9dc536fcf3cea15c261dca9d619d0edbaffec0ae502bdd4481117b38d808f35f"
+    },
+    {
+      "path": "scripts/windows/sync_full_api_docs.bat",
+      "size": 656,
+      "sha256": "009cd483fc2055be3beb203b91e3758d9725a65179c0d6999ec4bcfead795a15"
+    },
+    {
+      "path": "scripts/windows/upgrade_subscription_actions.bat",
+      "size": 619,
+      "sha256": "24f17b24f0788a951bf76bab77aef0b845cddbc19c303d051dda5d1b3496bc2c"
+    },
+    {
+      "path": "scripts/windows/verify_admin_api_docs_ui.bat",
+      "size": 1491,
+      "sha256": "eeb55c1e2a0e0d756646e98e4fc459a525fe25b8bbf746959e70dcbe97538e1d"
+    },
+    {
+      "path": "scripts/windows/VERIFY_ADMIN_FEISHU_IMPORT.ps1",
+      "size": 670,
+      "sha256": "9c26a0ff8c8dc2441a5c6ff963df6130b22b06ee6a2b6b7724a2c90ca0e81612"
+    },
+    {
+      "path": "scripts/windows/verify_kaipanla_three_snapshot_patch.bat",
+      "size": 977,
+      "sha256": "0e5a556f18ec317275b2356fa0ba975753d3656364a9be3830acb6582332b0c6"
+    },
+    {
+      "path": "scripts/windows/verify_six_plan_test_suite_fix.bat",
+      "size": 715,
+      "sha256": "76d71d9340c10db467ab07e7d96e3a0d6a5734f3346490c1f74ea35c4e2de190"
+    },
+    {
+      "path": "SECURITY_FIX_CHANGELOG.md",
+      "size": 2803,
+      "sha256": "80e774c397008ceecdfacf640d91b7393ad54fafb75e50e829d50c7da2659ed6"
+    },
+    {
+      "path": "services/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "services/admin_api_test_batch_service.py",
+      "size": 20428,
+      "sha256": "e309a2d63b36f5614a433c7c78393165ee379aaa63edae574f2b376ee60a2134"
+    },
+    {
+      "path": "services/admin_api_test_cleanup_service.py",
+      "size": 5849,
+      "sha256": "03c7e58fe8c1c8ec11a5cc4a1cc68c339b177b23eaef3cbfa61c567970a8d8b8"
+    },
+    {
+      "path": "services/admin_api_test_repository.py",
+      "size": 21173,
+      "sha256": "f1d95bfb9f678e395ab48c70cf72892750d046bf6fc519e6cf1105f3c786d8d3"
+    },
+    {
+      "path": "services/admin_api_test_security.py",
+      "size": 1751,
+      "sha256": "96c8a5b53faae6be6f837b54c912fce7f4e0f7af0b4e2e7c577dd5913031a5ed"
+    },
+    {
+      "path": "services/admin_api_test_storage.py",
+      "size": 11442,
+      "sha256": "7d9d4e36f399449a5d418d9e119508b1cde8689559125ffa890a862138d37aaa"
+    },
+    {
+      "path": "services/admin_auth.py",
+      "size": 11063,
+      "sha256": "aeee38f8b10792693c1d32f473124a6706789500459313d700c96ed397020319"
+    },
+    {
+      "path": "services/admin_captcha.py",
+      "size": 5928,
+      "sha256": "a003a33aecf236c70aa79bb01c558e5e0256cb4da48edbf6bf7f69fa439f85b1"
+    },
+    {
+      "path": "services/admin_client_certificate.py",
+      "size": 6783,
+      "sha256": "a551e1ed89df5e0e7b9a5d0db29e56e5f53785293075054dd8c770869f744a54"
+    },
+    {
+      "path": "services/admin_market_test_service.py",
+      "size": 20096,
+      "sha256": "f0dc53ce723067f700165199eb7dbe67638bc1a56eee9179a3be3646792bf6cf"
+    },
+    {
+      "path": "services/admin_user_service.py",
+      "size": 8233,
+      "sha256": "7e802c57d14d943e0711a6f0461c4f122a27cc2d45d73fde1d8b3d0596e7169a"
+    },
+    {
+      "path": "services/api_doc_catalog.py",
+      "size": 429864,
+      "sha256": "b2ac67a488334c1897cd5e6637fdcb62537e7755d6449ab9d0e75e4a8ccca618"
+    },
+    {
+      "path": "services/api_doc_catalog_runtime.py",
+      "size": 7008,
+      "sha256": "87364469df2419f722fcf78c4fe71d1fb34f676bee1ef382ce9b2ddd9b992628"
+    },
+    {
+      "path": "services/api_doc_runtime_status.py",
+      "size": 12633,
+      "sha256": "7a3e128edd0cbbc7b630b15ca2bcf8e7beb6e2ff0bddd6d65d33442b24e49f69"
+    },
+    {
+      "path": "services/api_doc_service.py",
+      "size": 29395,
+      "sha256": "6bc7bc7a0cb576badbedfad8c8d2909f97809da6459ece8236e7845a7a739fd3"
+    },
+    {
+      "path": "services/api_doc_status_scheduler.py",
+      "size": 6542,
+      "sha256": "8db25294a31025f598048d7896d4173f41a6297401555c77862fd25e4d6aa614"
+    },
+    {
+      "path": "services/api_token_security.py",
+      "size": 1774,
+      "sha256": "0d195de3fd820050e91087f9fd5f02b302338a7b70c9555ca4e784ac19139851"
+    },
+    {
+      "path": "services/audit_cleanup.py",
+      "size": 3356,
+      "sha256": "b5d5fed6b045bc69e7908c2e56f4422506e17ab299553e32ac5e4208932369bf"
+    },
+    {
+      "path": "services/audit_repository.py",
+      "size": 19621,
+      "sha256": "5dcea7e778ee90edabe84e1387f91afa022ea7d61b7888ac3a93bf95daa31c6c"
+    },
+    {
+      "path": "services/audit_schema.py",
+      "size": 6075,
+      "sha256": "e72d4185e82aac6d58a79146336e38aa50d392e6e1d5ab1da47e7ac52a152fa0"
+    },
+    {
+      "path": "services/audit_security.py",
+      "size": 6149,
+      "sha256": "fce978171ff4f28f458d56dd9d1940785b30a9d39d4f0101e95be118f2dbe421"
+    },
+    {
+      "path": "services/audit_service.py",
+      "size": 9121,
+      "sha256": "ae3675f734d32b900de60e71f014e8d3127d16946647dcb4d005b699f6bb0e56"
+    },
+    {
+      "path": "services/audit_spool.py",
+      "size": 13125,
+      "sha256": "5eb5b4901c89eeee0c4a35e27bddea4e624b13618e2bdd55bb9f8f5aecad84ce"
+    },
+    {
+      "path": "services/auth_context_cache.py",
+      "size": 4038,
+      "sha256": "187a9b69037f7622c7a84f4a2f96a60541da4e2dd5a857a5fb7a95e7639eb073"
+    },
+    {
+      "path": "services/captcha_service.py",
+      "size": 2882,
+      "sha256": "297950239a4abafc417c8687f27fc8128898aac94741bda98f5cc4b55c77100b"
+    },
+    {
+      "path": "services/contact_verification.py",
+      "size": 5955,
+      "sha256": "731e1ede2a8f8cca672b04452549ad05a1dba23f898a46166d7437b5c3967137"
+    },
+    {
+      "path": "services/environment_guard.py",
+      "size": 9365,
+      "sha256": "3a3c87afc941c393b05e41a408b46e6d6f1eb2e2cbda0b11e990d6acba4840fb"
+    },
+    {
+      "path": "services/feishu_sync_service.py",
+      "size": 36537,
+      "sha256": "935c68d5f0aa2dc85458e9e653702a8c3af6873bc8292cb7f9b560008b86d18e"
+    },
+    {
+      "path": "services/kaipanla_bidding_service.py",
+      "size": 20546,
+      "sha256": "169332172ba3d6eaf84ecf8d8c2296551e9dd91c15a981e0a27c15c8c36799ba"
+    },
+    {
+      "path": "services/kaipanla_snapshot_repository.py",
+      "size": 17800,
+      "sha256": "5571269c734fd21f352b6dfa76756112b26bb64fd0fc32c4ae39436649df64be"
+    },
+    {
+      "path": "services/kaipanla_snapshot_scheduler.py",
+      "size": 8824,
+      "sha256": "495438d90dc2ea6e50e7ab4df02d76db2f8d574fe11b49fb63f24a2bd009d1b9"
+    },
+    {
+      "path": "services/keyed_lock.py",
+      "size": 768,
+      "sha256": "9fcac050acb3014d732e464156daf8772f9d1af5d7e27398ce745b20ae270ea0"
+    },
+    {
+      "path": "services/market_data_cache.py",
+      "size": 16309,
+      "sha256": "1f0fa2884ca7722ffd0b31c8327f4d8e4f2d4de9fb1a7b7ff047dd0ecda3317c"
+    },
+    {
+      "path": "services/market_data_service.py",
+      "size": 17122,
+      "sha256": "24271babe5bddc8f70f049383a2cd358d8a0ddb65135df39e0eefa7a276bbf27"
+    },
+    {
+      "path": "services/market_interface_spec_service.py",
+      "size": 50221,
+      "sha256": "f5600ff171918e7ba0717a6b1df4e4e7eae6c1c49c2e7f8f091cfbd4bcc92523"
+    },
+    {
+      "path": "services/market_query_security.py",
+      "size": 13112,
+      "sha256": "de09583cf1ed5b84f928e9167045cdb6df6d9d123ffc619e4450f2e9cb1fa143"
+    },
+    {
+      "path": "services/member_service.py",
+      "size": 28892,
+      "sha256": "c7c6a5dd63c61673983138f010764b547b53b47389413eb8c5af1abc03cc534e"
+    },
+    {
+      "path": "services/notification_delivery.py",
+      "size": 2836,
+      "sha256": "89f731d69148d746de726ecc3bc55e16694d3b36a78e607eeb31a5bd409b924b"
+    },
+    {
+      "path": "services/plan_catalog.py",
+      "size": 6648,
+      "sha256": "eb505b15b4e71ffc51d5f5cd630f230535f74fd37739ccec900df457d78750e3"
+    },
+    {
+      "path": "services/process_lock.py",
+      "size": 3250,
+      "sha256": "7cb9f16da8e4460e63992b6aded723a19b0a3e74eef9b17c6dc2f4f290cefe0a"
+    },
+    {
+      "path": "services/production_readiness.py",
+      "size": 7895,
+      "sha256": "2b817afe5b1ebecc4d9c5d1603cbcd7a1ec54e356cc424b2fa7881ad476c0c83"
+    },
+    {
+      "path": "services/rate_limit_service.py",
+      "size": 7204,
+      "sha256": "eadee410d3e76f4de8fdd2f0416e0a7a367607985de8eaac88f2a7e72b664d30"
+    },
+    {
+      "path": "services/redis_backend.py",
+      "size": 2080,
+      "sha256": "3c2d528025b3afce70bb642d2bea9e5951244d46a91526983fb6e918a4921ffd"
+    },
+    {
+      "path": "services/runtime_stats.py",
+      "size": 1545,
+      "sha256": "61f3c3d599070ed9650613de3cc05df0b40fde8c9603e6698d731631f3bf0bd6"
+    },
+    {
+      "path": "services/security_credentials.py",
+      "size": 3324,
+      "sha256": "98fe52adff752968460d484a93d3fe40c6f98977cca70a7d883ca72c5a45955e"
+    },
+    {
+      "path": "services/sync_result.py",
+      "size": 1409,
+      "sha256": "72021ab9bb2c9fda7736d9ab9458b89f32a7f8452b9feb02b79e54514d30291d"
+    },
+    {
+      "path": "services/tushare_spec_monitor_repository.py",
+      "size": 17888,
+      "sha256": "cbe07e640f7056741237b173ca1d2ef69ede5d80feef87dc6cb23993eac96931"
+    },
+    {
+      "path": "services/tushare_spec_monitor_scheduler.py",
+      "size": 2071,
+      "sha256": "5a6d5d934f69e6ddd29c2b461262866841700f0ebc78ad866786863678ec89dd"
+    },
+    {
+      "path": "services/tushare_spec_monitor_service.py",
+      "size": 12206,
+      "sha256": "b698e8ce27daf4af2957f962e150f8753df44ee4005cb356be16534b411e63ed"
+    },
+    {
+      "path": "services/tushare_spec_sync_service.py",
+      "size": 47234,
+      "sha256": "472dbd24703cede1ed1d17a2add422295f5c362ea4907d9798894570f4d608a0"
+    },
+    {
+      "path": "services/usage_log_queue.py",
+      "size": 4625,
+      "sha256": "95f0c868bc4c65b70e97237c10497cb1bb1978c1405dc91351dd934bebb687b1"
+    },
+    {
+      "path": "services/user_input_security.py",
+      "size": 5017,
+      "sha256": "98a1c825463602e9f48eddb3ef629fa2e4c0ca8a9ae56f5c2aeb8c92030dda3e"
+    },
+    {
+      "path": "services/web_security.py",
+      "size": 5853,
+      "sha256": "a51e00171f8bbe647cf91765fe60c6ec5929fc2299203617edad867853f61628"
+    },
+    {
+      "path": "static/js/admin-login.js",
+      "size": 606,
+      "sha256": "e2bce2b6189ff6a7b937ae0023d2e8ac5a33e2db9019d97d820f3fe4f3c7d6a8"
+    },
+    {
+      "path": "static/js/security-ui.js",
+      "size": 868,
+      "sha256": "8b865666cf0c471fbb75eb6d7a67179a803496cdacc1f0320c166e161d204216"
+    },
+    {
+      "path": "static/user_register.js",
+      "size": 228,
+      "sha256": "a3f9f0bb5488f5fc06d8556cbf4d726ae6b396f4c5501b51370b0ab69e63944f"
+    },
+    {
+      "path": "templates/admin/interface_tester.html",
+      "size": 36677,
+      "sha256": "91e7a9c7d2b8942eb95085d35a4224f5e3edadd2e61c2b6df78177974cb191f5"
+    },
+    {
+      "path": "tests/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tests/fixtures/tushare_docs/ci_daily_308.md",
+      "size": 940,
+      "sha256": "15adb96b1f39760830da528b1e278b07630a15241099832faeaaa9d178448f4b"
+    },
+    {
+      "path": "tests/fixtures/tushare_docs/etf_basic_385.md",
+      "size": 1543,
+      "sha256": "543efdd703ddeeef58220649585923eda034560637f8390d293a24fbed376879"
+    },
+    {
+      "path": "tests/fixtures/tushare_docs/income_33.md",
+      "size": 642,
+      "sha256": "349cfa05b3d445cabfdedc4f3b7f1e68ca3a3184ceb2738f1ec4dca228c8cd14"
+    },
+    {
+      "path": "tests/README.md",
+      "size": 589,
+      "sha256": "0b184796ba4d37932237033080f57e1f3f405264d940479f41780cbe6eedd3eb"
+    },
+    {
+      "path": "tests/test_admin_api_docs_ui.py",
+      "size": 5769,
+      "sha256": "34b680de8840d97db5feccd73f001fde157765361eb9d0a2584f36d47151d61f"
+    },
+    {
+      "path": "tests/test_admin_api_test_batch_service.py",
+      "size": 10900,
+      "sha256": "4d668efef157ab69b9063c2117e48a298dc8fca46d6af503e1d2af6b8183d89e"
+    },
+    {
+      "path": "tests/test_admin_api_test_cleanup_service.py",
+      "size": 3568,
+      "sha256": "659a9e6e02674dea87d58197e1421dbccf39497a8a1d3a3baa24d092200b8491"
+    },
+    {
+      "path": "tests/test_admin_api_test_repository.py",
+      "size": 4323,
+      "sha256": "f5a2bebfc2eed4aca737ee98f6743db17cbb29d8bf134e0c8c783c6161389006"
+    },
+    {
+      "path": "tests/test_admin_api_test_storage.py",
+      "size": 4796,
+      "sha256": "3c651d59853647127bd626953d2d98be9f570e88b6e58679e43ca16927ffd8b2"
+    },
+    {
+      "path": "tests/test_admin_audit_routes.py",
+      "size": 8736,
+      "sha256": "ef85992a0369224e935d8bb981f765da8bee7a10807525cca609f840780d4d74"
+    },
+    {
+      "path": "tests/test_admin_audit_user_filter.py",
+      "size": 1331,
+      "sha256": "971e58b848a1ff0fe4653db013aa82dc883dd77205917dc90403a021ad20a6ac"
+    },
+    {
+      "path": "tests/test_admin_certificate_login_flow.py",
+      "size": 3383,
+      "sha256": "1349b9447bd96290e56fe8aff153d4ad7fb377c1dfce61006bf5a988a0d3e3a1"
+    },
+    {
+      "path": "tests/test_admin_client_certificate_auth.py",
+      "size": 4603,
+      "sha256": "c94069c38eb79d1cbc20ab7f02e63015350272572fe7ad4b4b4945a9383ef519"
+    },
+    {
+      "path": "tests/test_admin_client_certificate_cli.py",
+      "size": 4988,
+      "sha256": "3b2ec4383a51170ede71e8c52d676e322c0ffd8e90eac1601bb72465e6a449ce"
+    },
+    {
+      "path": "tests/test_admin_client_certificate_host_and_session.py",
+      "size": 3130,
+      "sha256": "8f5b353f6b9ec41892f511bf8f671efce0aaf88f9a57be9857005d875b61991c"
+    },
+    {
+      "path": "tests/test_admin_client_certificate_registry.py",
+      "size": 1928,
+      "sha256": "111071e6461fe51584371143705089ea5551970cff8f7b63fb8816abd49fc209"
+    },
+    {
+      "path": "tests/test_admin_feishu_registration_import.py",
+      "size": 7391,
+      "sha256": "7809c36bcc490b0d4be0323ffe9a2f54c9d191ada8b4b1689bff4921683b14d6"
+    },
+    {
+      "path": "tests/test_admin_image_captcha.py",
+      "size": 2383,
+      "sha256": "2ac9635519b0d16d8625deeb1d56517f912841cd0dff201c1c7612d65722f1c2"
+    },
+    {
+      "path": "tests/test_admin_market_test_routes.py",
+      "size": 16293,
+      "sha256": "f3c2a6b2dd8b54a1d1bbd6b79a1b27e8044f720d416fe4370c2aec73226b1dde"
+    },
+    {
+      "path": "tests/test_admin_market_test_service.py",
+      "size": 7732,
+      "sha256": "5ff05282a5f7f37999a462337e35ae9bdb935027b5063eb6fead169b2b8c9988"
+    },
+    {
+      "path": "tests/test_admin_mfa_fail_closed.py",
+      "size": 751,
+      "sha256": "b453af7d47bf16eff8a4c4f2122fe219b7eaf1302dec61301d9b2d9421ae1e7d"
+    },
+    {
+      "path": "tests/test_admin_mtls_caddy_template.py",
+      "size": 3442,
+      "sha256": "b98c4bc5abe859578d32b4db4f986b709a6b34d02be2d7d577a2bbd205805417"
+    },
+    {
+      "path": "tests/test_admin_mtls_nginx_template.py",
+      "size": 1540,
+      "sha256": "d5904e6fc94c9dfa3adc6d72a4520a532463bf44006af842907810699bd9180d"
+    },
+    {
+      "path": "tests/test_admin_mtls_production_readiness.py",
+      "size": 1964,
+      "sha256": "a934cadae624bdddef6c3b25f0cc269fed5704377990a3389459e127ff2a5e64"
+    },
+    {
+      "path": "tests/test_admin_state_change_audit.py",
+      "size": 4331,
+      "sha256": "95ea724cf79ef51d3f43567cb0a7264271ea073d13b64fee95612fdfae75703d"
+    },
+    {
+      "path": "tests/test_admin_user_center.py",
+      "size": 10565,
+      "sha256": "ce639787085e17649dad4e05a18ca6d87f96e01837258c38fb9a91741a6b9529"
+    },
+    {
+      "path": "tests/test_admin_user_service.py",
+      "size": 8774,
+      "sha256": "d7a6dda1b32356987eac949ec0a8b6c6345b9efc8bc2ded62e676c950fa8edef"
+    },
+    {
+      "path": "tests/test_api_access_audit.py",
+      "size": 7786,
+      "sha256": "483102328e47b916df4dc785529f19fd697a1df8a30c40899fb41bd826f0c64d"
+    },
+    {
+      "path": "tests/test_api_doc_catalog_runtime.py",
+      "size": 1435,
+      "sha256": "274c419128b4b7b7948f9ac2dea6c51f3d1f0402f2c2120a7b13c60bff3a44a2"
+    },
+    {
+      "path": "tests/test_api_doc_path_migration.py",
+      "size": 2714,
+      "sha256": "d5cdf2a87d3776e14236760e2f8a13d3394b9f13617b960cc75b66d3e9a8ffcf"
+    },
+    {
+      "path": "tests/test_api_doc_runtime_status.py",
+      "size": 5290,
+      "sha256": "12f75c6dc6321a138dd451166d6e854e1b4a52385d8ef8aef60700d4a999ce8c"
+    },
+    {
+      "path": "tests/test_api_doc_runtime_ui.py",
+      "size": 5249,
+      "sha256": "f690dae34760a40431ba3d4ec5d91ff1b61b13560c29d0e7009cf143d3f5d89b"
+    },
+    {
+      "path": "tests/test_api_doc_service.py",
+      "size": 18542,
+      "sha256": "e01762fd44f59f95f475684dbbcb0e1178f2ac37f4c0da358424ff3e84bd095b"
+    },
+    {
+      "path": "tests/test_api_token_hash_migration.py",
+      "size": 3221,
+      "sha256": "2f8ffc46c8ea00b5e5cb62bac790f9d7e5c86d23752b16ef0e3e1f35f2e177ea"
+    },
+    {
+      "path": "tests/test_app_database_teardown.py",
+      "size": 380,
+      "sha256": "ee12cb0000be3061b923add51235c2d29e28770ee1ae382d3114168b6cf8c825"
+    },
+    {
+      "path": "tests/test_app_security_integration.py",
+      "size": 6402,
+      "sha256": "1cf137d0264e70680730773f485acab83c8f42de89ab53f61319859c323aacb8"
+    },
+    {
+      "path": "tests/test_audit_exports.py",
+      "size": 3763,
+      "sha256": "7fe27657bae3a0325cadc60240b158a9063a32e853bba18cfd8796d532141897"
+    },
+    {
+      "path": "tests/test_audit_failure_modes.py",
+      "size": 854,
+      "sha256": "4ed5e7ecb6d54eb5723bc4a1fce9f4376d363295d5d6eddf0494b17a60bb9e07"
+    },
+    {
+      "path": "tests/test_audit_migration_command.py",
+      "size": 959,
+      "sha256": "6152ea3e80b8fc4a36e77614d0a1de28782a9386df1673d602aa0d54178315da"
+    },
+    {
+      "path": "tests/test_audit_retention.py",
+      "size": 8815,
+      "sha256": "0d6695617e6ddcc4856e62a6579b64e5544f6d7fd51daca70b61f54044a4a9fa"
+    },
+    {
+      "path": "tests/test_audit_schema.py",
+      "size": 3320,
+      "sha256": "c69937bf0faf8e5b7c568944145cc986263921d980e6089f1c14c0ed85aaebf0"
+    },
+    {
+      "path": "tests/test_audit_security.py",
+      "size": 4140,
+      "sha256": "1417bd3608373a3bfaca8149b9bec1da02d7ead5c4ff6b7cfd79e373cb4120a5"
+    },
+    {
+      "path": "tests/test_audit_spool.py",
+      "size": 4147,
+      "sha256": "a2766ea582f9b821fbef8a2851003c8b23a496850079a0236aed533174b28aba"
+    },
+    {
+      "path": "tests/test_auth_operation_audit.py",
+      "size": 6901,
+      "sha256": "a57d232efe6157a20f934cb41fb808115a19b6023f9bf1cc143b93ab9d32453a"
+    },
+    {
+      "path": "tests/test_catalog_failure_guard.py",
+      "size": 640,
+      "sha256": "199f445767a7bb35269383b5f04bf5f17e5c0befcb6d95af1d66e65ca950f508"
+    },
+    {
+      "path": "tests/test_contact_verification.py",
+      "size": 6171,
+      "sha256": "b1ecddb37280c93d0ca748fbdfba2dab60bb5b1198225fda05fb235789de119c"
+    },
+    {
+      "path": "tests/test_debug_kaipanla_raw_tool.py",
+      "size": 2224,
+      "sha256": "3b355d708e5d6a22e17b1f8a701e81b720a1a698915ceb9e35f94f9eae9ebb85"
+    },
+    {
+      "path": "tests/test_deployment_security_defaults.py",
+      "size": 1213,
+      "sha256": "cb295c0c454f1e67f66e35d4f998a0353f9b00539ac2145a0aa8a67b1d5dce9c"
+    },
+    {
+      "path": "tests/test_developer_plan_permissions.py",
+      "size": 3451,
+      "sha256": "679b78db0f32f1a867a69d5df58a36789af0dd2c2b40e70ffe9fcfb6eb500ec0"
+    },
+    {
+      "path": "tests/test_distributed_login_limiter.py",
+      "size": 1409,
+      "sha256": "914816dc4c0cc5f8b3067f8da1273f3ddc322ef78547b8d12cbb8ad4893e0374"
+    },
+    {
+      "path": "tests/test_dynamic_interface_counts.py",
+      "size": 1633,
+      "sha256": "6c487824af6ccd1cad6d20291603b6d67e4158abc495de1808ff6696981a3109"
+    },
+    {
+      "path": "tests/test_e2e_two_tier_tokens.py",
+      "size": 2558,
+      "sha256": "d19b82bd5bb830c6b6d184e1b575fc8ca93a5453022293802ceccee3244d4e90"
+    },
+    {
+      "path": "tests/test_environment_guard.py",
+      "size": 5134,
+      "sha256": "6d0d3de58967b2e3d9b29639ed161c3563a33453665de7a160e873d3385daeea"
+    },
+    {
+      "path": "tests/test_feishu_bidding_final_schema.py",
+      "size": 2378,
+      "sha256": "251e0011c3c52b4edd446312a695f6784455f63f8e23f3e00666a2254395b60a"
+    },
+    {
+      "path": "tests/test_feishu_bidding_schema_tool.py",
+      "size": 910,
+      "sha256": "8d3e8c9c5473a6dd6cdf0e838326fddef3fe1af31e27a10c12200569f7a31500"
+    },
+    {
+      "path": "tests/test_feishu_bidding_schema_v2.py",
+      "size": 2312,
+      "sha256": "6999668201b2bb40c84d89869583cfc42939888464c54d9a92c0c6681705474d"
+    },
+    {
+      "path": "tests/test_feishu_bidding_sync_v2.py",
+      "size": 5450,
+      "sha256": "dd807ab202da6b0d65ec61305237c2c8d352e76581010199b5bb10d13f3cdd89"
+    },
+    {
+      "path": "tests/test_feishu_kaipanla_v2_mapping.py",
+      "size": 1676,
+      "sha256": "667c3c70ff2dfe38da8705ecda4496a12561602ce3eb6f8142892499258c2f43"
+    },
+    {
+      "path": "tests/test_feishu_member_sync_safety.py",
+      "size": 9847,
+      "sha256": "1f9a730aeace2e94c055a6f699d33e76af49067485a85722f23d08bb96e460b3"
+    },
+    {
+      "path": "tests/test_feishu_subscription_fields.py",
+      "size": 4845,
+      "sha256": "c5f0985afbe1e8a8b39af85f4225670dd5204294f4ecd0cb1f0766b9a5db3e60"
+    },
+    {
+      "path": "tests/test_feishu_sync_concurrency.py",
+      "size": 5718,
+      "sha256": "8a40966fdcd5682cd4417c1cbbea78f5246bd3f1e9929a42bd6fcb8930099ca4"
+    },
+    {
+      "path": "tests/test_full_api_docs.py",
+      "size": 6341,
+      "sha256": "e16a8fb6991185443a41351fb2c8a4a054dbddd33f2bb6d7c5c6648d1c986ae0"
+    },
+    {
+      "path": "tests/test_generate_production_secrets_cli.py",
+      "size": 1319,
+      "sha256": "51ab055b0e8a4eaa714283e8e124cac93d57d1c104af6288ec4e1885ae7ccb4b"
+    },
+    {
+      "path": "tests/test_interface_spec_audit_tool.py",
+      "size": 839,
+      "sha256": "39eb754e5dec29974922b0846000fca8ff17fe387a3b687315ff2b6aa02f73a7"
+    },
+    {
+      "path": "tests/test_interface_test_params.py",
+      "size": 3754,
+      "sha256": "a6d2ce78f34a6227c750b1fe93810949dbf99a8af644c6b50745378abee110b7"
+    },
+    {
+      "path": "tests/test_kaipanla_api_doc_contract.py",
+      "size": 1361,
+      "sha256": "f698e0a586cb37ed5df5af31f456f75b5c157e3b6e5f359575fc027eb13c6a58"
+    },
+    {
+      "path": "tests/test_kaipanla_bidding_adapter.py",
+      "size": 3421,
+      "sha256": "956c8461baedc41373e43456a09f2b589c5382e618e7e9483c0c923fd070b766"
+    },
+    {
+      "path": "tests/test_kaipanla_bidding_service.py",
+      "size": 7771,
+      "sha256": "05b88c4f41bd3b9cc8cb9a67ccd5850dbae99f2029edd757d20fca06afdec8cb"
+    },
+    {
+      "path": "tests/test_kaipanla_business_status.py",
+      "size": 3220,
+      "sha256": "fe415a2fd482b669171f3cc66e88e9498a32292e7b1c8e067346aaaee6532f30"
+    },
+    {
+      "path": "tests/test_kaipanla_dual_snapshot_migration_tool.py",
+      "size": 2707,
+      "sha256": "c9e3a93b782111323538c9915cb7331fc61ffd316375f12681a64d426437980c"
+    },
+    {
+      "path": "tests/test_kaipanla_dual_snapshot_repository.py",
+      "size": 4570,
+      "sha256": "d719c6a1ef46ea97c9198d8e11be43222c02f9601953275c84777a5101f47b16"
+    },
+    {
+      "path": "tests/test_kaipanla_dual_snapshot_scheduler.py",
+      "size": 1964,
+      "sha256": "8f4b75a8cbee89be268affa8fdec6360802facd7ec227ca15d34230eacc0103a"
+    },
+    {
+      "path": "tests/test_kaipanla_dual_snapshot_service.py",
+      "size": 2971,
+      "sha256": "705971dc6691330cdfdfc18aba7756089edb460766e49d89fcb60b6860bf5b6e"
+    },
+    {
+      "path": "tests/test_kaipanla_history_route.py",
+      "size": 4038,
+      "sha256": "7426efe79e239a5060ffa80e62cc01793e43a867cb1003240021eb48a8620510"
+    },
+    {
+      "path": "tests/test_kaipanla_snapshot_repository.py",
+      "size": 3053,
+      "sha256": "d20c2b12e93daf7e89f0ca885e66540226c385a9af7a737113325953dc3f643f"
+    },
+    {
+      "path": "tests/test_kaipanla_snapshot_scheduler.py",
+      "size": 3271,
+      "sha256": "c55627e2124653a8b5cf9f447c0eb07544bcd59a77ae13e8b0396582a5b84f8c"
+    },
+    {
+      "path": "tests/test_kaipanla_snapshot_startup.py",
+      "size": 1710,
+      "sha256": "05778aa7a567c64a1d29a75e345a9ff9065c1d1acf85d75114ed66867965776a"
+    },
+    {
+      "path": "tests/test_kaipanla_triple_snapshot_repository.py",
+      "size": 2364,
+      "sha256": "7628f23b93d9764da37daabb243c1cc43eaa886425149cce78b768462836eddc"
+    },
+    {
+      "path": "tests/test_kaipanla_triple_snapshot_scheduler.py",
+      "size": 4059,
+      "sha256": "eefee004e7ea5e150fe81732b2a7814f4395f530641260ed021fa2a2a2e44a1b"
+    },
+    {
+      "path": "tests/test_kaipanla_triple_snapshot_service.py",
+      "size": 2928,
+      "sha256": "9019e1ea49e63b235af6fa70d8058422edbf5cc75d1448f93b96f0af0c75910a"
+    },
+    {
+      "path": "tests/test_kaipanla_v2_adapter.py",
+      "size": 5185,
+      "sha256": "0f59568ea0158c0d80bed9a419d2164952caa935b68961421495e45ad967c9da"
+    },
+    {
+      "path": "tests/test_kaipanla_v2_client.py",
+      "size": 4501,
+      "sha256": "9d6ebdeda643569780301d5d0b201c5a0955314a8881deb2443d12b1da3dce69"
+    },
+    {
+      "path": "tests/test_kaipanla_v2_migration.py",
+      "size": 2146,
+      "sha256": "5db1bd6d375cf8f4142600d2b06de0cc2a2d5f22cd203b3b37e28f761f052dbb"
+    },
+    {
+      "path": "tests/test_kaipanla_v2_public_schema_final.py",
+      "size": 2770,
+      "sha256": "7af8b7076dab90da033814bbefa131cafd9ffacb6a2260ea7729a6ffc1a375f9"
+    },
+    {
+      "path": "tests/test_kaipanla_v2_repository.py",
+      "size": 4026,
+      "sha256": "ef67dd26ee36031630d40f34454cf21025e0f13139da8e265dd68156289b2217"
+    },
+    {
+      "path": "tests/test_kaipanla_v2_route.py",
+      "size": 1891,
+      "sha256": "d1b20b5a31c3458cb4ac79f44f7e0c04f8ce2594aa6eb46ea951d744f78502ba"
+    },
+    {
+      "path": "tests/test_kaipanla_v2_scheduler.py",
+      "size": 1726,
+      "sha256": "95cfa5121323a6c84514ecabd580d584f55e4be77eb8c6c64b2c0cd5aa259873"
+    },
+    {
+      "path": "tests/test_kaipanla_v2_service.py",
+      "size": 4793,
+      "sha256": "178ab64e838f37b4816557e84eb63e010c80f053f15f65e723ae26bc2145fb31"
+    },
+    {
+      "path": "tests/test_legacy_token_revocation.py",
+      "size": 3023,
+      "sha256": "170a350b6412023aaabfa7991f3d0b2dd51a9c474b8bee90546bc35cf0eb1aca"
+    },
+    {
+      "path": "tests/test_market_data_cache.py",
+      "size": 1942,
+      "sha256": "d7f00bc51f72ba3ad83159681e053b81c8b5d163652d57dd73c6f62ef704c4a3"
+    },
+    {
+      "path": "tests/test_market_data_cache_memory_limits.py",
+      "size": 1424,
+      "sha256": "bff305187ee49a54577545a3b499c4b69913dce30101117b4eee32cd6be2205e"
+    },
+    {
+      "path": "tests/test_market_data_resilience.py",
+      "size": 3255,
+      "sha256": "fb2831ffe0d9807ef4471de6b9d9a465fb8996ff682b77b4b2152104461be49b"
+    },
+    {
+      "path": "tests/test_market_error_sanitization.py",
+      "size": 1557,
+      "sha256": "c007f5e852ab0be0fbe9e3a53aac762686bb5477b13687874ee82868532859b2"
+    },
+    {
+      "path": "tests/test_market_interface_specs.py",
+      "size": 16246,
+      "sha256": "a08986eca6f7dc2b57e10ad66cd3ecb31a27515567efa2001fe97a1eb6171360"
+    },
+    {
+      "path": "tests/test_market_query_security.py",
+      "size": 3858,
+      "sha256": "78d6fc7b173d0908d8f275451b4f37376b0e8b9a928896f6a02ec91e456c3688"
+    },
+    {
+      "path": "tests/test_market_response_limits.py",
+      "size": 1595,
+      "sha256": "b9449b86924c8896a35b2f7afc807fa0ea64c4fc01dd6b101acccb3f9b7d14d3"
+    },
+    {
+      "path": "tests/test_miniqmt_adapter.py",
+      "size": 783,
+      "sha256": "2eae1158ef581f3e21b76ebe0f4abbb6485559c589109de9b4570a4a3b29e4ec"
+    },
+    {
+      "path": "tests/test_operation_audit.py",
+      "size": 6763,
+      "sha256": "87e5c75665c4195fd339658b7ea5c30853bf380e7b448fcceb8c901f30054564"
+    },
+    {
+      "path": "tests/test_password_reset_security.py",
+      "size": 1640,
+      "sha256": "4183a827eb091b8c8805da4395666b52e3a17d19c17f374edaa1d81581f3360c"
+    },
+    {
+      "path": "tests/test_plan_scopes.py",
+      "size": 1198,
+      "sha256": "40bb95f2ed9c8657d7ad61b24bcff88527325ce04bce7a91521b4ad6d1eebd8f"
+    },
+    {
+      "path": "tests/test_production_readiness.py",
+      "size": 4164,
+      "sha256": "107c34f154bccf737161dc467a0d07769b79be96af1839b2c2fc352fda4df1a8"
+    },
+    {
+      "path": "tests/test_production_security_credentials.py",
+      "size": 1610,
+      "sha256": "6a9860cbbca62bd4495e1c9b7f5bdd6575dd0a26341b8b088c40cf15230f2cc4"
+    },
+    {
+      "path": "tests/test_provider_registry.py",
+      "size": 2768,
+      "sha256": "6374ce10b877816af471c2aaa68199808ef5e077521b4aca10b76ca81641fa8c"
+    },
+    {
+      "path": "tests/test_rate_limit_service.py",
+      "size": 3082,
+      "sha256": "602c2edb7876d8db2ce5f4ea0a46aac63a232af3bd74669b124e41cc27736fd3"
+    },
+    {
+      "path": "tests/test_registration_security_controls.py",
+      "size": 2775,
+      "sha256": "681461b6524ebd82c1f293482a3891794fe19d7bed1b0a1bc86e8987d527efda"
+    },
+    {
+      "path": "tests/test_release_package_hardening.py",
+      "size": 2034,
+      "sha256": "6c605815ef344c55da39bb4a60226b4da7e01320aa3ecc3ffed6104739338130"
+    },
+    {
+      "path": "tests/test_release_secret_scanner.py",
+      "size": 961,
+      "sha256": "372b9e3ca8ee1c6f5c4b1e39db062311e7c30df85c8300b81dac1e9f3b4b2cc5"
+    },
+    {
+      "path": "tests/test_runtime_service_startup_guard.py",
+      "size": 1147,
+      "sha256": "3bd7ac3bb6813d4800020adc8c259a34d36f45e56fe2579d027eb8f3c650f682"
+    },
+    {
+      "path": "tests/test_secure_registration_flow.py",
+      "size": 6110,
+      "sha256": "a439bea0287bf4e6626fa13ad6230b29167697c68e086c863dd1b90a0879fa49"
+    },
+    {
+      "path": "tests/test_source_package_hardening.py",
+      "size": 2194,
+      "sha256": "1d285b9a3c1a08987cdb3d813469db30192f3dddf7c6836c1a4c164455ce4c0b"
+    },
+    {
+      "path": "tests/test_sqlite_write_retry.py",
+      "size": 3220,
+      "sha256": "bd25cc5d5be8bd0f899057686f0d03970f818fb9bb8b3cf0be1dd627c0e12ca7"
+    },
+    {
+      "path": "tests/test_subscription_actions.py",
+      "size": 6444,
+      "sha256": "5880777f33d882476ed1388f8ab78b38ee768bc17218aa1e466b2256c560b6c9"
+    },
+    {
+      "path": "tests/test_sync_tushare_interface_specs_cli.py",
+      "size": 790,
+      "sha256": "aa128c55f33e1ccfd3ae9802ad22eae71c90d8b518892a04e87e5a6845d7708c"
+    },
+    {
+      "path": "tests/test_tushare_catalog.py",
+      "size": 2792,
+      "sha256": "1104a894b74ca0c42c363efb99f7935d01d970f91d1fea737cd348261d57e528"
+    },
+    {
+      "path": "tests/test_tushare_client.py",
+      "size": 7507,
+      "sha256": "516a821aea5583ed1e697f4773bb72c559252a95f69a0b58f7224b8016b2b35f"
+    },
+    {
+      "path": "tests/test_tushare_latest_available.py",
+      "size": 6901,
+      "sha256": "90a5ec5e1b1a7108b87d48d7c7026807ac15748d66f3c41850ac3a948867d847"
+    },
+    {
+      "path": "tests/test_tushare_spec_monitor_repository.py",
+      "size": 5082,
+      "sha256": "285317678b8ca33b81bd8833aae223b28d8b2b223cb3e7db8a702cbbd49665d5"
+    },
+    {
+      "path": "tests/test_tushare_spec_monitor_scheduler.py",
+      "size": 804,
+      "sha256": "3c3fd78dc2ccf7b28f9e53a99ea94bc1dcdf4de7d216d1f6d288b525fd83225f"
+    },
+    {
+      "path": "tests/test_tushare_spec_monitor_service.py",
+      "size": 5242,
+      "sha256": "626078b51c4c05f841a1dc12659fc9d74f468017fdfe0f29e552e490ec7a65d1"
+    },
+    {
+      "path": "tests/test_tushare_spec_sync_service.py",
+      "size": 25104,
+      "sha256": "ba7c655ecfa302c3f3302aacfb8684993a39cf3a5ef890977797864363dcb8ff"
+    },
+    {
+      "path": "tests/test_tushare_transport_security.py",
+      "size": 1303,
+      "sha256": "717ccf6bbbcf1811cdbb30eb5a02b4162872ff101becaf91b7e0fa33cbdfb343"
+    },
+    {
+      "path": "tests/test_two_tier_plan_migration.py",
+      "size": 4867,
+      "sha256": "51fa83b26645c9dbb4e833791ab7ad0c4ff406c57965a59c80a980f746faafc6"
+    },
+    {
+      "path": "tests/test_unified_market_routes.py",
+      "size": 1500,
+      "sha256": "47d3e85f21c9b768353206beb0616ef75dd9715ada045ec30daeb49a16f40e83"
+    },
+    {
+      "path": "tests/test_user_api_docs_ui.py",
+      "size": 4824,
+      "sha256": "804e5a2d4926a24e4c003a5716d7284ec6e4195736ee3310fed10d68b7bc6c0a"
+    },
+    {
+      "path": "tests/test_user_input_security.py",
+      "size": 2300,
+      "sha256": "d2331256f6bce131df28934141c12cdddf65f652550f90fc52c2e05bedcd1393"
+    },
+    {
+      "path": "tests/test_user_session_revocation.py",
+      "size": 3752,
+      "sha256": "8fb73504b20aea3b097b051bb3b6ea34414223c1bd05d4466a81b2187115bad5"
+    },
+    {
+      "path": "tests/test_web_security_hardening.py",
+      "size": 779,
+      "sha256": "9097c78b189e40fe7540ebca309f83f485d7c9134839e2c99c8cd97f16f1fad9"
+    },
+    {
+      "path": "tests/test_windows_environment_switch_assets.py",
+      "size": 3885,
+      "sha256": "beea9cac8cb08d35526b13d4cc07b12d307417fafd2d66e971f2106e5b5c32fc"
+    },
+    {
+      "path": "tests/test_windows_production_assets.py",
+      "size": 4030,
+      "sha256": "bd913547fb22b1041b378d87994a12b5103a47c798a0760976183aa0941d5416"
+    },
+    {
+      "path": "tests/test_windows_script_portability.py",
+      "size": 10714,
+      "sha256": "56639b4127949806a4d413d01c83141618ef08ee4a9a1d8e3deb52123fc1997e"
+    },
+    {
+      "path": "tools/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/admin_api_test_worker.py",
+      "size": 1959,
+      "sha256": "2f4b3e4860f8a668d593a7c44af0ea6f655cb634307fd30ea139b2cf41458aa8"
+    },
+    {
+      "path": "tools/api_doc_status_worker.py",
+      "size": 1904,
+      "sha256": "734c77fee807d585840202ea90cf4dca9127273af65d5abcddc0775df8692d55"
+    },
+    {
+      "path": "tools/audit_cleanup_worker.py",
+      "size": 815,
+      "sha256": "0eb1a62c404ca9f0889d297a9804b3503cf7de8c02c9f202cb9707508c6bc778"
+    },
+    {
+      "path": "tools/audit_interface_specs.py",
+      "size": 4711,
+      "sha256": "3753e4491fefd4aa67a29db2ed26f1c8740dc8310f4138f0175907bc4ec4272e"
+    },
+    {
+      "path": "tools/check_developer_plan_permissions.py",
+      "size": 197,
+      "sha256": "bf5e4f3d164724c17a384a65f1d59dcda775b49fcbc47a1cf3ce4aad0f59b355"
+    },
+    {
+      "path": "tools/check_feishu_bidding_schema.py",
+      "size": 1296,
+      "sha256": "c1734d0a23306667d79d7a71a017e113900c942076e933856a45c634cae27ef0"
+    },
+    {
+      "path": "tools/check_two_tier_plans.py",
+      "size": 4576,
+      "sha256": "46def1bb67e13518d50379b0d9fbf8cdee45a3fee19b1837ff2a5bb0892288ba"
+    },
+    {
+      "path": "tools/cleanup_obsolete_files.py",
+      "size": 3281,
+      "sha256": "e212e271f695fe7ae995e67c9f4121e238d8c8cec3414639fbdf5a8c7687d12e"
+    },
+    {
+      "path": "tools/db/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/db/apply_developer_research_plans.py",
+      "size": 184,
+      "sha256": "b00176c66ed11c84f5ad77a666e744fba4aa2ad2ad496cdd67d947efad03cd7c"
+    },
+    {
+      "path": "tools/db/apply_two_tier_plans.py",
+      "size": 4840,
+      "sha256": "1035d13a090e7005912804555cdf585a7e705f82cb23de3bf827bf90f60eb8f5"
+    },
+    {
+      "path": "tools/db/check_schema.py",
+      "size": 279,
+      "sha256": "50eedbac14a7a04d40d4b2fc2c44fb83887691a978ca4bceed803b6197a2c388"
+    },
+    {
+      "path": "tools/db/cleanup_usage_logs.py",
+      "size": 801,
+      "sha256": "f2fadb07c7bcfcf57a11d175b0be3fd7076c3f0aec0fdfe235193790520b58b2"
+    },
+    {
+      "path": "tools/db/init_plans.py",
+      "size": 188,
+      "sha256": "e86bcc8eeb00de22ce7b1e97942cdd3c279cb6fba8c69ebbbfa511abdc4ffd2d"
+    },
+    {
+      "path": "tools/db/inspect_database.py",
+      "size": 511,
+      "sha256": "ca3a28ae79596c7529e8f4c2e80ef7d140a53cb622379fe2efb500014958b2a5"
+    },
+    {
+      "path": "tools/db/migrate.py",
+      "size": 436,
+      "sha256": "58c48269d43dcc1dd9f331a10a829b18e4834d7e422be31569d286540cb9288e"
+    },
+    {
+      "path": "tools/db/migrate_audit_history.py",
+      "size": 1301,
+      "sha256": "1c14f4163d0387e25c3bcb69df8b4993e7ca6494c61f5eea20967e3a0f8d39cc"
+    },
+    {
+      "path": "tools/db/migrate_kaipanla_dual_snapshot.py",
+      "size": 6578,
+      "sha256": "076cf734e5719162aa46ba0b3e035516e490bdd791d6fbdd8aeee90f16735897"
+    },
+    {
+      "path": "tools/db/migrate_legacy_tokens.py",
+      "size": 2978,
+      "sha256": "4a8564e01bf44602c574ab91b9714a7170747bf554ac63ed8de5739eeda6659e"
+    },
+    {
+      "path": "tools/db/migrate_provider_architecture.py",
+      "size": 1602,
+      "sha256": "66377e6bde7572484f79621f06ebe3cc214256985bc345da62780da64f519aa8"
+    },
+    {
+      "path": "tools/db/migrate_subscription_actions.py",
+      "size": 2450,
+      "sha256": "a53c0efc665fa944adc6db88c1e9b83d72d75ed392cd6c57e19dfa971bf7b7bc"
+    },
+    {
+      "path": "tools/debug/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/debug/raw_http_debug.py",
+      "size": 2094,
+      "sha256": "09cf9f0927925f5d436f806bb6538b3728fbb00dac70beaba9de55a6a7806ad6"
+    },
+    {
+      "path": "tools/debug_kaipanla_raw.py",
+      "size": 3070,
+      "sha256": "df582a58b2315c3d87d4acfc3138574a4e5e1e814d3dddc82631250ed84dd866"
+    },
+    {
+      "path": "tools/environment_preflight.py",
+      "size": 2230,
+      "sha256": "4e44f26d09847e36b0e240d85344d78e2a54335eea399be27d5cd08a43714d8f"
+    },
+    {
+      "path": "tools/feishu_worker.py",
+      "size": 1934,
+      "sha256": "50793b16011681216b50e035eb450b8db2a999d14d026a59418815766e6213cb"
+    },
+    {
+      "path": "tools/interface_tester.py",
+      "size": 35512,
+      "sha256": "a3c4c1622e1416c4fb784edfd9937dc75361fb0b7b2583617310f624e8791a81"
+    },
+    {
+      "path": "tools/kaipanla_snapshot_worker.py",
+      "size": 2272,
+      "sha256": "075940e5b0a12aa613b2ea4d56b342f9d051702b976380736f8a6a4155771237"
+    },
+    {
+      "path": "tools/load_test.py",
+      "size": 5106,
+      "sha256": "b8e34d12df3cb9cff85996df907f213441ba09328ac791f6762622dc2396fbc1"
+    },
+    {
+      "path": "tools/market_data_optimization/__init__.py",
+      "size": 203,
+      "sha256": "1bdae118108fa51f27542b6ea64fc4a0bc5233559942cb864e1735004eab0932"
+    },
+    {
+      "path": "tools/market_data_optimization/apply_market_data_optimization_env.bat",
+      "size": 823,
+      "sha256": "1ef6342eb8addf3437b9d14dc7c1e30a660578a5e0f651dbd26b31f17eab5da0"
+    },
+    {
+      "path": "tools/market_data_optimization/apply_market_data_optimization_env.py",
+      "size": 3886,
+      "sha256": "128ed5ae9172d6aee1fd8a37f8e6aa5f8882656cf1c97cbf018776191ff71f99"
+    },
+    {
+      "path": "tools/market_data_optimization/check_patch_installation.bat",
+      "size": 742,
+      "sha256": "a088d4429973e5e4540481b58a366b05a2217ae0d56e4f1add98d68ad8da6ebb"
+    },
+    {
+      "path": "tools/market_data_optimization/check_patch_installation.py",
+      "size": 1317,
+      "sha256": "364fc891a667dd52fa1e90b28bfda6f775715ba31b6b6925c6e16976f160d00b"
+    },
+    {
+      "path": "tools/market_data_optimization/organize_previous_patch_layout.bat",
+      "size": 741,
+      "sha256": "419e07f8336f9bd06f86ede1d4b1058f7eba3a0ea5679d835bde628200b30fc6"
+    },
+    {
+      "path": "tools/market_data_optimization/organize_previous_patch_layout.py",
+      "size": 1470,
+      "sha256": "db6f4d75c048ec17a7dc5af57a891ca3bf0eb3281fbfe3dcb527d2af29ce1511"
+    },
+    {
+      "path": "tools/market_data_optimization/run_market_data_optimization_setup.bat",
+      "size": 1200,
+      "sha256": "5896311bd1cd9679ade24fcfdb3f431e9b72da8963786b0048057cd20e8032d7"
+    },
+    {
+      "path": "tools/market_data_optimization/verify_market_data_optimization.bat",
+      "size": 762,
+      "sha256": "c408568e313539862e12430738d8cd30d75d1390c563137e3743da883be72e35"
+    },
+    {
+      "path": "tools/market_data_optimization/verify_market_data_optimization.py",
+      "size": 5618,
+      "sha256": "819f9d0943cf0736697e926fe14bbae3d0aafc4ee0597fd12b6689c052615e1a"
+    },
+    {
+      "path": "tools/membership_tester.py",
+      "size": 17441,
+      "sha256": "a783f0e68de559bdd02a984937fb4efc460024fcee4d9835fc02e5376d1e1841"
+    },
+    {
+      "path": "tools/migrate_kaipanla_snapshots_v2.py",
+      "size": 5958,
+      "sha256": "a78cac286075373d142a31e52f1a18e16fc6eb40002ce8b2d96e7e0ab26ad70f"
+    },
+    {
+      "path": "tools/performance/load_test.py",
+      "size": 3978,
+      "sha256": "712d06cf56420aed167d640537d209c28ad72b49e6b86e0ad899555c7b5b10a7"
+    },
+    {
+      "path": "tools/production_preflight.py",
+      "size": 3775,
+      "sha256": "4a92233e6cc759e550ed204a0d243f485d82e6a85217493ee84984184f713b3f"
+    },
+    {
+      "path": "tools/release/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/release/build_production_package.py",
+      "size": 4064,
+      "sha256": "308e639cc5f8626b22f13ce6a669ac0eb105d870b2cae065bc76e9ff33809151"
+    },
+    {
+      "path": "tools/release/build_source_package.py",
+      "size": 3828,
+      "sha256": "204e512d037791211c5026aa5c837c1e1b0c3a8da5fa796eb03b15bf28084af0"
+    },
+    {
+      "path": "tools/release/compile_requirements.py",
+      "size": 430,
+      "sha256": "82bb5fda41dd4ae19e6989e8ad9a6664a9c43a94a80fe607fd24641176b5678e"
+    },
+    {
+      "path": "tools/security/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/security/admin_client_certificate.py",
+      "size": 12231,
+      "sha256": "5a1fd5f5e200b02d13470e9b18adfa1367fd75b31579d9e471ad577a72413a91"
+    },
+    {
+      "path": "tools/security/audit_dependencies.py",
+      "size": 270,
+      "sha256": "6a9a01ccbf1f628dd320322a9fcfcb3461a522c67d4b18af002d048bb438b3c1"
+    },
+    {
+      "path": "tools/security/generate_admin_totp.py",
+      "size": 1914,
+      "sha256": "67ab98ea403d56d09ac99179ac247ae7ba1ebcee243b700abd2b75e918e91651"
+    },
+    {
+      "path": "tools/security/generate_production_secrets.py",
+      "size": 1882,
+      "sha256": "eef2876cb53d095938c9e2f6018206d4b915987523a9e9a6abd99cca140399a3"
+    },
+    {
+      "path": "tools/security/revoke_all_api_tokens.py",
+      "size": 975,
+      "sha256": "73aba690f940d6413adee502028eaeda63aa92bfc70683b7614253270fba1e8d"
+    },
+    {
+      "path": "tools/security/revoke_legacy_api_tokens.py",
+      "size": 208,
+      "sha256": "f44e48fe98295febc51c925aba84f3b660b8ef9e1db4d99c095055eb238b457e"
+    },
+    {
+      "path": "tools/security/scan_release_secrets.py",
+      "size": 5287,
+      "sha256": "dd79a5a289141078da193474ce6a904ecd5b99c8360801253587dd7a6b45f503"
+    },
+    {
+      "path": "tools/sync_full_api_docs.py",
+      "size": 1333,
+      "sha256": "02385d74cc7fc2d1af05a267a3b37efb5783da6214698c27859275ee582e1482"
+    },
+    {
+      "path": "tools/sync_tushare_interface_specs.py",
+      "size": 929,
+      "sha256": "e8411a5b43f78da323358cbaa98d155c456148a7b54e7f62357e39487b813dc1"
+    },
+    {
+      "path": "tools/token_generator.py",
+      "size": 4430,
+      "sha256": "17263944ebb1e959921a883a812607d5987418d35e036add1a3a128104773112"
+    },
+    {
+      "path": "tools/tushare_spec_monitor.py",
+      "size": 1671,
+      "sha256": "614bb26a0100807dfbdb73d3c51c162d03ad1e44e10b0bf55fd719a4619c2255"
+    },
+    {
+      "path": "tools/tushare_spec_monitor_worker.py",
+      "size": 890,
+      "sha256": "d3c76dcfd5103ab941420f3b09ce3f9236145061c2841c226957d8b749da1212"
+    },
+    {
+      "path": "tools/validate_interface_specs.py",
+      "size": 852,
+      "sha256": "f13677ad1c713c9f0ca48dd43f820acb1e9609ecdf40d449367f3515ed702643"
+    },
+    {
+      "path": "tools/windows_script_audit.py",
+      "size": 1920,
+      "sha256": "a53a605e333654e082752aaad1957244df41a7e76a2a6f0766fe27408b0ea494"
+    },
+    {
+      "path": "utils/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "utils/common.py",
+      "size": 979,
+      "sha256": "4a62c3ccc05a256d74e26c2463fc1d13e4c9bbc8be5ebbffbb724d01e9fa6a06"
+    },
+    {
+      "path": "wsgi.py",
+      "size": 85,
+      "sha256": "d7d88149314ea931ce466f4d5e4a6d57a9de82c55c8c16c50afb47082e2a3eb3"
+    }
+  ]
+}

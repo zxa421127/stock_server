@@ -1,0 +1,23 @@
+[Unit]
+Description=Stock Server Admin API Test Worker
+After=stock-web.service
+Requires=stock-web.service
+
+[Service]
+Type=simple
+User=stockserver
+Group=stockserver
+WorkingDirectory=/opt/stock-server
+EnvironmentFile=/etc/stock-server/stock-server.env
+ExecStart=/opt/stock-server/.venv/bin/python -m tools.admin_api_test_worker
+Restart=on-failure
+RestartSec=5
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/stock-server/data /opt/stock-server/logs /opt/stock-server/interface_specs
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

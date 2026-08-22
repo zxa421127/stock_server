@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Secrets and runtime data
+.env
+*.db
+*.sqlite3
+data/*
+!data/.gitkeep
+data-dev/
+data-test/
+logs/*
+!logs/.gitkeep
+logs-dev/
+token_record.txt
+
+# Build artifacts
+*.zip
+dist/
+build/
+
+# Administrator client-certificate private material
+security/admin-client-ca/
+security/admin-client-certificates/
+*.p12
+*.pfx
+*.key.pem
+
+# Local patch backups
+patch_backups/
+
+# Certificates
+security/*-ca/
+security/*-certs/
+*.crt.pem
+
+# Backup files
+*.backup*

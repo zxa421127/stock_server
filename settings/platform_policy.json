@@ -1,0 +1,254 @@
+{
+  "config": {
+    "ADMIN_API_TEST_CLEANUP_HOUR": 3,
+    "ADMIN_API_TEST_DISK_CRITICAL_PERCENT": 90,
+    "ADMIN_API_TEST_DISK_WARNING_PERCENT": 80,
+    "ADMIN_API_TEST_MAX_CONCURRENT_BATCHES": 1,
+    "ADMIN_API_TEST_MAX_CONCURRENT_ITEMS": 2,
+    "ADMIN_API_TEST_MAX_PREVIEW_PAGE_SIZE": 500,
+    "ADMIN_API_TEST_MAX_RESULT_BYTES": 1073741824,
+    "ADMIN_API_TEST_OFFICIAL_SYNC_DELAY_MS": 150,
+    "ADMIN_API_TEST_OFFICIAL_SYNC_RETRIES": 1,
+    "ADMIN_API_TEST_OFFICIAL_SYNC_TIMEOUT_SECONDS": 30,
+    "ADMIN_API_TEST_PREVIEW_PAGE_SIZE": 100,
+    "ADMIN_API_TEST_RETENTION_DAYS": 30,
+    "ADMIN_CAPTCHA_TTL_SECONDS": 300,
+    "API_ACCESS_LOG_RETENTION_DAYS": 30,
+    "API_DOC_STATUS_FILE_SCAN_SECONDS": 60,
+    "API_DOC_STATUS_REFRESH_INTERVAL_SECONDS": 43200,
+    "API_DOC_STATUS_STARTUP_DELAY_SECONDS": 300,
+    "API_DOC_STATUS_SUBPROCESS_TIMEOUT_SECONDS": 7200,
+    "API_KEY_TOUCH_INTERVAL_SECONDS": 300,
+    "API_MAX_DATAFRAME_BYTES": 67108864,
+    "API_MAX_RESPONSE_BYTES": 20971520,
+    "API_MAX_RESPONSE_ROWS": 5000,
+    "API_MAX_RESPONSE_ROWS_OVERRIDES": {
+      "tushare.bak_daily": 10000,
+      "tushare.daily": 10000,
+      "tushare.daily_basic": 10000,
+      "tushare.stk_limit": 10000,
+      "tushare.stock_basic": 10000
+    },
+    "AUDIT_CSV_EXPORT_MAX_ROWS": 50000,
+    "AUDIT_SPOOL_BATCH_SIZE": 500,
+    "AUDIT_SPOOL_FLUSH_INTERVAL_SECONDS": 1,
+    "AUDIT_SPOOL_MAX_RETRIES": 10,
+    "AUDIT_SPOOL_SYNCHRONOUS": "FULL",
+    "BIDDING_SYNC_COUNT": 10000,
+    "CONTACT_CODE_TTL_SECONDS": 300,
+    "DEFAULT_REQUESTS_PER_MINUTE": 1000,
+    "GLOBAL_REQUESTS_PER_SECOND": 600,
+    "KAIPANLA_SNAPSHOT_LEASE_SECONDS": 300,
+    "KAIPANLA_SNAPSHOT_WINDOW_SECONDS": 120,
+    "MARKET_DATA_BACKGROUND_REFRESH_APIS": [
+      "stock_company",
+      "stock_basic",
+      "trade_cal"
+    ],
+    "MARKET_DATA_BACKGROUND_REFRESH_WORKERS": 2,
+    "MARKET_DATA_CACHE_ENABLED": true,
+    "MARKET_DATA_CACHE_EXCLUDE_APIS": [
+      "rt_k",
+      "rt_min",
+      "rt_min_daily",
+      "rt_idx_k",
+      "rt_idx_min",
+      "rt_etf_k",
+      "rt_etf_min",
+      "rt_etf_min_daily",
+      "rt_etf_sz_iopv",
+      "rt_sw_k",
+      "download_history"
+    ],
+    "MARKET_DATA_CACHE_MAX_ITEMS": 5000,
+    "MARKET_DATA_CACHE_MAX_ITEM_BYTES": 67108864,
+    "MARKET_DATA_CACHE_MAX_ROWS_PER_ITEM": 100000,
+    "MARKET_DATA_CACHE_MAX_TOTAL_BYTES": 536870912,
+    "MARKET_DATA_CACHE_TTL_OVERRIDES": {
+      "balancesheet": 21600,
+      "bse_mapping": 86400,
+      "cashflow": 21600,
+      "disclosure_date": 21600,
+      "etf_basic": 21600,
+      "fina_audit": 21600,
+      "fina_indicator": 21600,
+      "fina_mainbz": 21600,
+      "income": 21600,
+      "index_classify": 21600,
+      "index_member_all": 21600,
+      "st": 300,
+      "stk_managers": 21600,
+      "stk_rewards": 21600,
+      "stock_basic": 21600,
+      "stock_company": 86400,
+      "stock_hsgt": 21600,
+      "stock_st": 3600,
+      "trade_cal": 86400
+    },
+    "MARKET_DATA_CACHE_TTL_SECONDS": 300,
+    "MARKET_DATA_EMPTY_CACHE_TTL_SECONDS": 45,
+    "MARKET_DATA_PREWARM_APIS": [
+      "stock_company"
+    ],
+    "MARKET_DATA_PREWARM_DELAY_SECONDS": 3,
+    "MARKET_DATA_REDIS_MAX_COMPRESSED_BYTES": 33554432,
+    "MARKET_DATA_REDIS_MAX_DECOMPRESSED_BYTES": 134217728,
+    "MARKET_DATA_REFRESH_AHEAD_SECONDS": 60,
+    "MARKET_DATA_STALE_IF_ERROR_APIS": [
+      "stock_company",
+      "stock_basic",
+      "trade_cal",
+      "stock_hsgt",
+      "stock_st",
+      "bse_mapping",
+      "etf_basic",
+      "index_classify",
+      "index_member_all"
+    ],
+    "MARKET_DATA_STALE_IF_ERROR_SECONDS": 604800,
+    "MARKET_QUERY_CONCURRENCY_RETRY_AFTER_SECONDS": 2,
+    "MARKET_QUERY_DATE_SPAN_OVERRIDES": {},
+    "MARKET_QUERY_DEFAULT_MAX_DATE_SPAN_DAYS": 3660,
+    "MARKET_QUERY_FINANCIAL_MAX_DATE_SPAN_DAYS": 7300,
+    "MARKET_QUERY_GENERAL_MAX_CONCURRENT_PER_TOKEN": 2,
+    "MARKET_QUERY_GENERAL_MAX_CONCURRENT_PER_USER": 2,
+    "MARKET_QUERY_INTRADAY_MAX_DATE_SPAN_DAYS": 31,
+    "MARKET_QUERY_LEASE_TTL_SECONDS": 180,
+    "MARKET_QUERY_MAX_CONCURRENT_GLOBAL": 12,
+    "MARKET_QUERY_MAX_CONCURRENT_PER_TOKEN": 2,
+    "MARKET_QUERY_MAX_CONCURRENT_PER_USER": 4,
+    "MARKET_QUERY_MAX_FIELDS": 120,
+    "MARKET_QUERY_MAX_PARAMS": 50,
+    "MARKET_QUERY_MAX_PARAM_KEY_LENGTH": 64,
+    "MARKET_QUERY_MAX_PARAM_VALUE_LENGTH": 4096,
+    "MARKET_QUERY_SPECIAL_MAX_CONCURRENT_PER_TOKEN": 4,
+    "MARKET_QUERY_SPECIAL_MAX_CONCURRENT_PER_USER": 4,
+    "MAX_REQUEST_BODY_BYTES": 1048576,
+    "MIN_REQUESTS_PER_MINUTE": 1,
+    "REGISTRATION_CAPTCHA_TTL_SECONDS": 300,
+    "SERVER_THREADS": 16,
+    "TUSHARE_SPEC_MONITOR_HOUR": 2,
+    "TUSHARE_SPEC_MONITOR_LEASE_SECONDS": 21600,
+    "TUSHARE_SPEC_MONITOR_MINUTE": 30,
+    "TUSHARE_SPEC_MONITOR_TIMEZONE": "Asia/Shanghai",
+    "TUSHARE_SPEC_MONITOR_WEEKDAYS": "wed,sun",
+    "USAGE_LOG_QUEUE_SIZE": 20000,
+    "USER_PASSWORD_MIN_LENGTH": 12,
+    "WAITRESS_CHANNEL_TIMEOUT": 120,
+    "WAITRESS_CONNECTION_LIMIT": 200
+  },
+  "plans": {
+    "admin": {
+      "duration_days": 36500,
+      "duration_type": "internal",
+      "max_symbols_per_request": 1000,
+      "min_refresh_interval_sec": 0,
+      "original_price_cent": 0,
+      "plan_code": "admin_internal",
+      "plan_name": "内部管理员权限",
+      "plan_type": "admin",
+      "public": false,
+      "quota_daily": 0,
+      "quota_per_minute": 1000,
+      "sale_price_cent": 0,
+      "scopes": [
+        "*",
+        "admin:*",
+        "admin:sync",
+        "admin:member:read",
+        "admin:member:write",
+        "tushare:read",
+        "tushare:points15000:read",
+        "tushare:independent:*",
+        "market:read",
+        "market:kaipanla:read",
+        "market:miniqmt:read"
+      ]
+    },
+    "general": {
+      "shared": {
+        "max_symbols_per_request": 100,
+        "min_refresh_interval_sec": 0,
+        "public": true,
+        "quota_daily": 20000,
+        "quota_per_minute": 120,
+        "scopes": [
+          "tushare:read",
+          "tushare:points15000:read"
+        ]
+      },
+      "variants": [
+        {
+          "duration_days": 30,
+          "duration_type": "month",
+          "original_price_cent": 4900,
+          "plan_code": "general_month",
+          "plan_name": "通用接口月卡（15000积分权限）",
+          "sale_price_cent": 4900
+        },
+        {
+          "duration_days": 90,
+          "duration_type": "quarter",
+          "original_price_cent": 14700,
+          "plan_code": "general_quarter",
+          "plan_name": "通用接口季卡（15000积分权限）",
+          "sale_price_cent": 14700
+        },
+        {
+          "duration_days": 365,
+          "duration_type": "year",
+          "original_price_cent": 58800,
+          "plan_code": "general_year",
+          "plan_name": "通用接口年卡（15000积分权限）",
+          "sale_price_cent": 58800
+        }
+      ]
+    },
+    "special": {
+      "shared": {
+        "max_symbols_per_request": 100,
+        "min_refresh_interval_sec": 0,
+        "public": true,
+        "quota_daily": 50000,
+        "quota_per_minute": 300,
+        "scopes": [
+          "tushare:read",
+          "tushare:points15000:read",
+          "tushare:independent:*",
+          "market:read",
+          "market:kaipanla:read"
+        ]
+      },
+      "variants": [
+        {
+          "duration_days": 30,
+          "duration_type": "month",
+          "original_price_cent": 8900,
+          "plan_code": "special_month",
+          "plan_name": "特殊权限月卡（通用+单独权限+开盘啦）",
+          "sale_price_cent": 8900
+        },
+        {
+          "duration_days": 90,
+          "duration_type": "quarter",
+          "original_price_cent": 26700,
+          "plan_code": "special_quarter",
+          "plan_name": "特殊权限季卡（通用+单独权限+开盘啦）",
+          "sale_price_cent": 26700
+        },
+        {
+          "duration_days": 365,
+          "duration_type": "year",
+          "original_price_cent": 106800,
+          "plan_code": "special_year",
+          "plan_name": "特殊权限年卡（通用+单独权限+开盘啦）",
+          "sale_price_cent": 106800
+        }
+      ]
+    }
+  },
+  "schema_version": 1,
+  "waitress": {
+    "backlog": 2048
+  }
+}

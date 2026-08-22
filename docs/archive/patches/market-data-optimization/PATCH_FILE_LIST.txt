@@ -1,0 +1,37 @@
+需要覆盖/新增的文件：
+
+核心配置与启动：
+- config.py
+- app.py
+- .env.example
+
+缓存与服务：
+- services/market_data_cache.py
+- services/market_data_service.py
+- routes/market_data_routes.py
+
+Tushare目录与测试参数：
+- integrations/market_data/tushare/catalog.py
+- tools/interface_tester.py
+- test_suite/core/all_data_interfaces_test.py
+
+新增配置/验证工具：
+- tools/market_data_optimization/__init__.py
+- tools/market_data_optimization/apply_market_data_optimization_env.py
+- tools/market_data_optimization/organize_previous_patch_layout.py
+- tools/market_data_optimization/apply_market_data_optimization_env.bat
+- tools/market_data_optimization/organize_previous_patch_layout.bat
+- tools/market_data_optimization/verify_market_data_optimization.bat
+
+测试文件：
+- tests/test_market_data_cache.py
+- tests/test_provider_registry.py
+- tests/test_unified_market_routes.py
+- tests/test_market_data_resilience.py
+- tests/test_interface_test_params.py
+
+说明：
+- docs/patches/market_data_optimization/README.md
+- docs/patches/market_data_optimization/PATCH_FILE_LIST.txt
+- docs/patches/market_data_optimization/SOURCE_DIFF.patch
+- docs/patches/market_data_optimization/SHA256SUMS.txt

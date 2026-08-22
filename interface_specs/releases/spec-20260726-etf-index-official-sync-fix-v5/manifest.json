@@ -1,0 +1,13 @@
+{
+  "version": "spec-20260726-etf-index-official-sync-fix-v5",
+  "previous_version": "spec-20260725-ci-daily-official-monitor-v4",
+  "created_at": "2026-07-26T04:14:42",
+  "source": "official_bootstrap_etf_index_and_permission_contract_fix",
+  "selected_interfaces": [
+    "tushare::etf_index",
+    "tushare::ci_daily",
+    "tushare::etf_basic"
+  ],
+  "interface_count": 140,
+  "specs_hash": "d4599a7dc01ab7d058fda89d546b96922aa8f697f6b825885eb5cefed56bf3f5"
+}

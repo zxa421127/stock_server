@@ -1,0 +1,437 @@
+--- a/services/api_doc_service.py
++++ b/services/api_doc_service.py
+@@ -120,14 +120,21 @@
+ 
+ 
+ def full_api_docs_status() -> dict[str, Any]:
+-    """Return the current generated-document synchronization status."""
++    """Return synchronization status without opening a write transaction."""
+     conn = get_conn()
+     cur = conn.cursor()
+-    _ensure_sync_meta_table(cur)
+     cur.execute(
+-        "SELECT meta_value FROM api_doc_sync_meta WHERE meta_key='full_api_docs_version'"
++        "SELECT 1 FROM sqlite_master "
++        "WHERE type='table' AND name='api_doc_sync_meta'"
+     )
+-    version_row = cur.fetchone()
++    meta_table_exists = cur.fetchone() is not None
++    version_row = None
++    if meta_table_exists:
++        cur.execute(
++            "SELECT meta_value FROM api_doc_sync_meta "
++            "WHERE meta_key='full_api_docs_version'"
++        )
++        version_row = cur.fetchone()
+     cur.execute(
+         """
+         SELECT COUNT(*) AS cnt
+@@ -152,158 +159,172 @@
+     ``/api/v1/market/tushare/`` and ``/api/v1/market/kaipanla/``.
+     Other administrator-created documents are preserved.
+ 
+-    Once the current version is installed, ordinary page requests only perform
+-    a small version/count check and do not overwrite later administrator edits.
+-    Pass ``force=True`` to rebuild all generated documents from the code catalog.
++    Every successful exit commits the transaction, including the idempotent
++    no-change path. Any exception rolls back before it is propagated.
+     """
+     conn = get_conn()
+-    cur = conn.cursor()
+-    _ensure_sync_meta_table(cur)
+-    cleanup_result = cleanup_obsolete_api_docs(cur)
++    try:
++        cur = conn.cursor()
++        _ensure_sync_meta_table(cur)
++        cleanup_result = cleanup_obsolete_api_docs(cur)
+ 
+-    cur.execute(
+-        "SELECT meta_value FROM api_doc_sync_meta WHERE meta_key='full_api_docs_version'"
+-    )
+-    version_row = cur.fetchone()
+-    installed_version = version_row["meta_value"] if version_row else ""
++        cur.execute(
++            "SELECT meta_value FROM api_doc_sync_meta "
++            "WHERE meta_key='full_api_docs_version'"
++        )
++        version_row = cur.fetchone()
++        installed_version = version_row["meta_value"] if version_row else ""
+ 
+-    cur.execute(
+-        """
+-        SELECT COUNT(*) AS cnt
+-        FROM api_doc_endpoints
+-        WHERE path LIKE '/api/v1/market/tushare/%'
+-           OR path LIKE '/api/v1/market/kaipanla/%'
+-        """
+-    )
+-    count_row = cur.fetchone()
+-    installed_count = int(count_row["cnt"] or 0) if count_row else 0
++        cur.execute(
++            """
++            SELECT COUNT(*) AS cnt
++            FROM api_doc_endpoints
++            WHERE path LIKE '/api/v1/market/tushare/%'
++               OR path LIKE '/api/v1/market/kaipanla/%'
++            """
++        )
++        count_row = cur.fetchone()
++        installed_count = int(count_row["cnt"] or 0) if count_row else 0
+ 
+-    if (
+-        not force
+-        and installed_version == FULL_API_DOCS_VERSION
+-        and installed_count == FULL_API_DOCS_TOTAL
+-    ):
+-        if cleanup_result["obsolete_docs_deleted"] or cleanup_result["empty_categories_deleted"]:
++        if (
++            not force
++            and installed_version == FULL_API_DOCS_VERSION
++            and installed_count == FULL_API_DOCS_TOTAL
++        ):
++            # cleanup_obsolete_api_docs() executes DELETE statements. SQLite
++            # starts a write transaction even when those DELETEs affect zero
++            # rows, so this commit is mandatory on every successful return.
+             conn.commit()
+-            logging.info("[API文档] 已清理旧文档: %s", cleanup_result)
+-        return {
+-            "changed": False,
+-            "version": installed_version,
+-            "endpoint_count": installed_count,
+-            "category_count": len({doc["category"] for doc in FULL_API_DOCS}),
+-            **cleanup_result,
+-        }
++            if (
++                cleanup_result["obsolete_docs_deleted"]
++                or cleanup_result["empty_categories_deleted"]
++            ):
++                logging.info("[API文档] 已清理旧文档: %s", cleanup_result)
++            return {
++                "changed": False,
++                "version": installed_version,
++                "endpoint_count": installed_count,
++                "category_count": len({doc["category"] for doc in FULL_API_DOCS}),
++                **cleanup_result,
++            }
++
++        now = _now()
++        category_ids: dict[str, int] = {}
++        category_docs: dict[str, dict[str, Any]] = {}
++        for doc in FULL_API_DOCS:
++            category_docs.setdefault(doc["category"], doc)
++
++        for category_name, sample in sorted(
++            category_docs.items(),
++            key=lambda item: (
++                int(item[1].get("category_sort_order") or 100),
++                item[0],
++            ),
++        ):
++            cur.execute(
++                "SELECT id FROM api_doc_categories "
++                "WHERE name=? ORDER BY id LIMIT 1",
++                (category_name,),
++            )
++            row = cur.fetchone()
++            if row:
++                category_id = int(row["id"])
++                cur.execute(
++                    """
++                    UPDATE api_doc_categories
++                    SET description=?, sort_order=?, status='active', updated_at=?
++                    WHERE id=?
++                    """,
++                    (
++                        sample.get("category_description") or "",
++                        int(sample.get("category_sort_order") or 100),
++                        now,
++                        category_id,
++                    ),
++                )
++            else:
++                cur.execute(
++                    """
++                    INSERT INTO api_doc_categories
++                        (name, description, sort_order, status, created_at, updated_at)
++                    VALUES (?, ?, ?, 'active', ?, ?)
++                    """,
++                    (
++                        category_name,
++                        sample.get("category_description") or "",
++                        int(sample.get("category_sort_order") or 100),
++                        now,
++                        now,
++                    ),
++                )
++                category_id = int(cur.lastrowid)
++            category_ids[category_name] = category_id
+ 
+-    now = _now()
+-    category_ids: dict[str, int] = {}
+-    category_docs: dict[str, dict[str, Any]] = {}
+-    for doc in FULL_API_DOCS:
+-        category_docs.setdefault(doc["category"], doc)
+-
+-    for category_name, sample in sorted(
+-        category_docs.items(),
+-        key=lambda item: (int(item[1].get("category_sort_order") or 100), item[0]),
+-    ):
+         cur.execute(
+-            "SELECT id FROM api_doc_categories WHERE name=? ORDER BY id LIMIT 1",
+-            (category_name,),
++            """
++            DELETE FROM api_doc_endpoints
++            WHERE path LIKE '/api/v1/market/tushare/%'
++               OR path LIKE '/api/v1/market/kaipanla/%'
++            """
+         )
+-        row = cur.fetchone()
+-        if row:
+-            category_id = int(row["id"])
+-            cur.execute(
+-                """
+-                UPDATE api_doc_categories
+-                SET description=?, sort_order=?, status='active', updated_at=?
+-                WHERE id=?
+-                """,
+-                (
+-                    sample.get("category_description") or "",
+-                    int(sample.get("category_sort_order") or 100),
+-                    now,
+-                    category_id,
+-                ),
+-            )
+-        else:
++
++        for doc in FULL_API_DOCS:
+             cur.execute(
+                 """
+-                INSERT INTO api_doc_categories
+-                    (name, description, sort_order, status, created_at, updated_at)
+-                VALUES (?, ?, ?, 'active', ?, ?)
++                INSERT INTO api_doc_endpoints (
++                    category_id, title, method, path, scope, description,
++                    params_text, headers_text, request_example, response_example,
++                    error_codes, sort_order, status, created_at, updated_at
++                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+                 """,
+                 (
+-                    category_name,
+-                    sample.get("category_description") or "",
+-                    int(sample.get("category_sort_order") or 100),
++                    category_ids[doc["category"]],
++                    doc["title"],
++                    doc.get("method") or "GET",
++                    doc["path"],
++                    doc.get("scope") or "",
++                    doc.get("description") or "",
++                    _params_text(doc),
++                    DEFAULT_HEADERS,
++                    doc.get("request_example") or "",
++                    doc.get("response_example") or DEFAULT_RESPONSE,
++                    DEFAULT_ERROR_CODES,
++                    int(doc.get("sort_order") or 100),
+                     now,
+                     now,
+                 ),
+             )
+-            category_id = int(cur.lastrowid)
+-        category_ids[category_name] = category_id
+-
+-    cur.execute(
+-        """
+-        DELETE FROM api_doc_endpoints
+-        WHERE path LIKE '/api/v1/market/tushare/%'
+-           OR path LIKE '/api/v1/market/kaipanla/%'
+-        """
+-    )
+ 
+-    for doc in FULL_API_DOCS:
+         cur.execute(
+             """
+-            INSERT INTO api_doc_endpoints (
+-                category_id, title, method, path, scope, description,
+-                params_text, headers_text, request_example, response_example,
+-                error_codes, sort_order, status, created_at, updated_at
+-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
++            INSERT INTO api_doc_sync_meta (meta_key, meta_value, updated_at)
++            VALUES ('full_api_docs_version', ?, ?)
++            ON CONFLICT(meta_key) DO UPDATE SET
++                meta_value=excluded.meta_value,
++                updated_at=excluded.updated_at
+             """,
+-            (
+-                category_ids[doc["category"]],
+-                doc["title"],
+-                doc.get("method") or "GET",
+-                doc["path"],
+-                doc.get("scope") or "",
+-                doc.get("description") or "",
+-                _params_text(doc),
+-                DEFAULT_HEADERS,
+-                doc.get("request_example") or "",
+-                doc.get("response_example") or DEFAULT_RESPONSE,
+-                DEFAULT_ERROR_CODES,
+-                int(doc.get("sort_order") or 100),
+-                now,
+-                now,
+-            ),
++            (FULL_API_DOCS_VERSION, now),
+         )
++        conn.commit()
+ 
+-    cur.execute(
+-        """
+-        INSERT INTO api_doc_sync_meta (meta_key, meta_value, updated_at)
+-        VALUES ('full_api_docs_version', ?, ?)
+-        ON CONFLICT(meta_key) DO UPDATE SET
+-            meta_value=excluded.meta_value,
+-            updated_at=excluded.updated_at
+-        """,
+-        (FULL_API_DOCS_VERSION, now),
+-    )
+-    conn.commit()
+-
+-    logging.info(
+-        "[API文档] 完整目录同步完成 version=%s categories=%s endpoints=%s force=%s",
+-        FULL_API_DOCS_VERSION,
+-        len(category_ids),
+-        FULL_API_DOCS_TOTAL,
+-        force,
+-    )
+-    return {
+-        "changed": True,
+-        "version": FULL_API_DOCS_VERSION,
+-        "endpoint_count": FULL_API_DOCS_TOTAL,
+-        "category_count": len(category_ids),
+-        **cleanup_result,
+-    }
+-
++        logging.info(
++            "[API文档] 完整目录同步完成 "
++            "version=%s categories=%s endpoints=%s force=%s",
++            FULL_API_DOCS_VERSION,
++            len(category_ids),
++            FULL_API_DOCS_TOTAL,
++            force,
++        )
++        return {
++            "changed": True,
++            "version": FULL_API_DOCS_VERSION,
++            "endpoint_count": FULL_API_DOCS_TOTAL,
++            "category_count": len(category_ids),
++            **cleanup_result,
++        }
++    except Exception:
++        conn.rollback()
++        raise
+ 
+ 
+ def get_api_doc_statistics(
+@@ -418,7 +439,13 @@
+     return result
+ 
+ def ensure_default_api_docs() -> None:
+-    """Ensure that the complete generated public documentation is installed."""
++    """Install generated docs only when the read-only status check is stale."""
++    status = full_api_docs_status()
++    if (
++        status["installed_version"] == status["expected_version"]
++        and status["installed_count"] == status["expected_count"]
++    ):
++        return
+     sync_full_api_docs(force=False)
+ 
+ 
+--- a/app.py
++++ b/app.py
+@@ -14,7 +14,7 @@
+ from werkzeug.exceptions import HTTPException
+ 
+ import config
+-from db_utils import init_db
++from db_utils import close_thread_connection, init_db
+ from routes.admin_api_doc_routes import admin_api_doc_bp
+ from routes.admin_audit_routes import admin_audit_bp
+ from routes.admin_member_routes import admin_member_bp
+@@ -176,6 +176,13 @@
+         if exc is not None:
+             finish_api_audit(None, exc)
+ 
++    @app.teardown_appcontext
++    def close_request_database_connection(exc):
++        # The connection is thread-local. Closing it at the Flask context
++        # boundary prevents any missed commit/rollback from leaking a lock
++        # into the next request handled by the same Waitress worker thread.
++        close_thread_connection()
++
+     @app.get("/")
+     def index():
+         return {
+--- a/tests/test_api_doc_service.py
++++ b/tests/test_api_doc_service.py
+@@ -1,6 +1,7 @@
+ # -*- coding: utf-8 -*-
+ from __future__ import annotations
+ 
++import sqlite3
+ import tempfile
+ import threading
+ import unittest
+@@ -134,6 +135,43 @@
+ 
+         self._run_with_temp_db(assertions)
+ 
++    def test_idempotent_sync_releases_write_transaction(self):
++        def assertions(conn):
++            api_doc_service.sync_full_api_docs(force=True)
++
++            result = api_doc_service.sync_full_api_docs(force=False)
++
++            self.assertFalse(result["changed"])
++            self.assertFalse(conn.in_transaction)
++
++        self._run_with_temp_db(assertions)
++
++    def test_idempotent_sync_allows_second_connection_writer(self):
++        def assertions(conn):
++            api_doc_service.sync_full_api_docs(force=True)
++            api_doc_service.sync_full_api_docs(force=False)
++
++            second = sqlite3.connect(db_utils.DB_FILE, timeout=0.1)
++            try:
++                second.execute("BEGIN IMMEDIATE")
++                second.rollback()
++            finally:
++                second.close()
++
++        self._run_with_temp_db(assertions)
++
++    def test_ensure_default_docs_skips_sync_when_catalog_is_current(self):
++        def assertions(conn):
++            api_doc_service.sync_full_api_docs(force=True)
++
++            with patch.object(api_doc_service, "sync_full_api_docs") as sync_mock:
++                api_doc_service.ensure_default_api_docs()
++
++            sync_mock.assert_not_called()
++            self.assertFalse(conn.in_transaction)
++
++        self._run_with_temp_db(assertions)
++
+     def test_central_statistics_are_computed_from_database(self):
+         def assertions(conn):
+             api_doc_service.sync_full_api_docs(force=True)
+--- /dev/null
++++ b/tests/test_app_database_teardown.py
+@@ -0,0 +1,10 @@
++# -*- coding: utf-8 -*-
++from pathlib import Path
++
++
++def test_app_context_teardown_closes_thread_database_connection():
++    source = Path("app.py").read_text(encoding="utf-8")
++
++    assert "from db_utils import close_thread_connection, init_db" in source
++    assert "@app.teardown_appcontext" in source
++    assert "close_thread_connection()" in source

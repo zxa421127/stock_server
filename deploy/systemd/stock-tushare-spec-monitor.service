@@ -1,0 +1,22 @@
+[Unit]
+Description=Stock Server Tushare Specification Monitor
+After=network-online.target stock-web.service
+
+[Service]
+Type=simple
+User=stockserver
+Group=stockserver
+WorkingDirectory=/opt/stock-server
+EnvironmentFile=/etc/stock-server/stock-server.env
+ExecStart=/opt/stock-server/.venv/bin/python -m tools.tushare_spec_monitor_worker
+Restart=on-failure
+RestartSec=10
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/stock-server/data /opt/stock-server/logs /opt/stock-server/interface_specs
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

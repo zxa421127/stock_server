@@ -1,0 +1,9 @@
+{
+  "version": "spec-20260725-ci-daily-official-monitor-v4",
+  "created_at": "2026-07-25T10:37:27",
+  "source": "ci_daily_official_bootstrap_and_scheduled_monitor",
+  "base_version": "spec-20260725-ci-daily-official-bootstrap-v3",
+  "interface_count": 140,
+  "specs_hash": "8ab4710588f687d0a80d24810f4070cab73ba679f99b6f38d974ff6bb5d563ee",
+  "notes": "ci_daily按TuShare官方文档308校准；启用每周三/周日02:30官网规格监控"
+}

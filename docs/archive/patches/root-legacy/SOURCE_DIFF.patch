@@ -1,0 +1,407 @@
+--- a/start_stock_server.cmd
++++ b/start_stock_server.cmd
+@@ -1,10 +1,33 @@
+ @echo off
+-setlocal
++setlocal EnableExtensions
+ 
+-cd /d C:\stockdata\stock_server || exit /b 1
++rem Resolve the project root from this script's own location.
++for %%I in ("%~dp0.") do set "PROJECT_ROOT=%%~fI"
+ 
+-if not exist "C:\stockdata\stock_server\logs" mkdir "C:\stockdata\stock_server\logs"
++pushd "%PROJECT_ROOT%" || (
++    echo [ERROR] Cannot enter project directory: %PROJECT_ROOT%
++    exit /b 1
++)
+ 
+-"C:\stockdata\stock_server\.venv\Scripts\python.exe" "C:\stockdata\stock_server\run_waitress.py" >> "C:\stockdata\stock_server\logs\startup.log" 2>&1
++if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (
++    set "PYTHON_EXE=%PROJECT_ROOT%\.venv\Scripts\python.exe"
++) else (
++    where python >nul 2>&1
++    if errorlevel 1 (
++        echo [ERROR] Python was not found and .venv\Scripts\python.exe does not exist.
++        popd
++        exit /b 1
++    )
++    set "PYTHON_EXE=python"
++)
+ 
+-endlocal
+\ No newline at end of file
++if not exist "%PROJECT_ROOT%\logs" mkdir "%PROJECT_ROOT%\logs"
++
++echo [INFO] Project root: %PROJECT_ROOT%
++echo [INFO] Python: %PYTHON_EXE%
++
++"%PYTHON_EXE%" "%PROJECT_ROOT%\run_waitress.py" >> "%PROJECT_ROOT%\logs\startup.log" 2>&1
++set "EXIT_CODE=%ERRORLEVEL%"
++
++popd
++endlocal & exit /b %EXIT_CODE%
+--- a/verify_six_plan_test_suite_fix.bat
++++ b/verify_six_plan_test_suite_fix.bat
+@@ -1,15 +1,45 @@
+ @echo off
+ chcp 65001 >nul
+-cd /d C:\stockdata\stock_server
+-call .venv\Scripts\activate.bat
+-python -m unittest tests.test_test_suite_two_tier_tokens tests.test_feishu_subscription_fields -v
+-if errorlevel 1 (
+-  echo.
+-  echo FAILED: 六套餐测试角色或飞书旧套餐映射仍有问题。
+-  pause
+-  exit /b 1
++setlocal EnableExtensions
++
++rem Resolve the project root from this script's own location.
++for %%I in ("%~dp0.") do set "PROJECT_ROOT=%%~fI"
++
++pushd "%PROJECT_ROOT%" || (
++    echo [ERROR] 无法进入项目目录: %PROJECT_ROOT%
++    exit /b 1
+ )
++
++if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (
++    set "PYTHON_EXE=%PROJECT_ROOT%\.venv\Scripts\python.exe"
++) else (
++    where python >nul 2>&1
++    if errorlevel 1 (
++        echo [ERROR] 未找到 Python，也未找到 .venv\Scripts\python.exe。
++        popd
++        exit /b 1
++    )
++    set "PYTHON_EXE=python"
++)
++
++echo [INFO] 项目目录: %PROJECT_ROOT%
++echo [INFO] Python: %PYTHON_EXE%
++
++"%PYTHON_EXE%" -m unittest tests.test_test_suite_two_tier_tokens tests.test_feishu_subscription_fields -v
++set "EXIT_CODE=%ERRORLEVEL%"
++
++if not "%EXIT_CODE%"=="0" (
++    echo.
++    echo FAILED: 六套餐测试角色或飞书旧套餐映射仍有问题。
++    popd
++    pause
++    endlocal & exit /b %EXIT_CODE%
++)
++
+ echo.
+ echo PASS: 六套餐测试Token角色和飞书旧套餐代码兼容检查通过。
+ echo 请继续依次运行 test_suite\02_account_permissions、03_provider_catalog、04_all_data_interfaces。
++
++popd
+ pause
++endlocal & exit /b 0
+--- a/test_suite/01_deployment/run.bat
++++ b/test_suite/01_deployment/run.bat
+@@ -1,9 +1,36 @@
+ @echo off
+ chcp 65001 >nul
+-cd /d C:\stockdata\stock_server
+-call .venv\Scripts\activate.bat
+-set PYTHONPATH=C:\stockdata\stock_server\test_suite\core;%PYTHONPATH%
+-set STOCK_SERVER_ROOT=C:\stockdata\stock_server
+-set STOCK_TEST_BASE_URL=http://127.0.0.1:8899
+-python -m auto_tests.deployment_test
++setlocal EnableExtensions
++
++rem This script is two levels below the project root.
++for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
++
++pushd "%PROJECT_ROOT%" || (
++    echo [ERROR] 无法进入项目目录: %PROJECT_ROOT%
++    exit /b 1
++)
++
++if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (
++    set "PYTHON_EXE=%PROJECT_ROOT%\.venv\Scripts\python.exe"
++) else (
++    where python >nul 2>&1
++    if errorlevel 1 (
++        echo [ERROR] 未找到 Python，也未找到 .venv\Scripts\python.exe。
++        popd
++        exit /b 1
++    )
++    set "PYTHON_EXE=python"
++)
++
++set "PYTHONPATH=%PROJECT_ROOT%\test_suite\core;%PYTHONPATH%"
++set "STOCK_SERVER_ROOT=%PROJECT_ROOT%"
++if not defined STOCK_TEST_BASE_URL set "STOCK_TEST_BASE_URL=http://127.0.0.1:8899"
++
++echo [INFO] 项目目录: %PROJECT_ROOT%
++echo [INFO] 测试地址: %STOCK_TEST_BASE_URL%
++"%PYTHON_EXE%" -m auto_tests.deployment_test
++set "EXIT_CODE=%ERRORLEVEL%"
++
++popd
+ pause
++endlocal & exit /b %EXIT_CODE%
+--- a/test_suite/02_account_permissions/01_prepare_test_accounts.bat
++++ b/test_suite/02_account_permissions/01_prepare_test_accounts.bat
+@@ -1,9 +1,38 @@
+ @echo off
+ chcp 65001 >nul
+-cd /d C:\stockdata\stock_server
+-call .venv\Scripts\activate.bat
+-echo This test changes reserved __MEMBERSHIP_TEST_ accounts. Back up the DB_FILE database (normally data\tokens.db) first.
++setlocal EnableExtensions
++
++rem This script is two levels below the project root.
++for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
++
++pushd "%PROJECT_ROOT%" || (
++    echo [ERROR] 无法进入项目目录: %PROJECT_ROOT%
++    exit /b 1
++)
++
++if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (
++    set "PYTHON_EXE=%PROJECT_ROOT%\.venv\Scripts\python.exe"
++) else (
++    where python >nul 2>&1
++    if errorlevel 1 (
++        echo [ERROR] 未找到 Python，也未找到 .venv\Scripts\python.exe。
++        popd
++        exit /b 1
++    )
++    set "PYTHON_EXE=python"
++)
++
++echo [INFO] 项目目录: %PROJECT_ROOT%
++echo This test changes reserved __MEMBERSHIP_TEST_ accounts. Back up the DB_FILE database ^(normally data\tokens.db^) first.
+ choice /C YN /M "Continue"
+-if errorlevel 2 exit /b 0
+-python -m tools.membership_tester
++if errorlevel 2 (
++    popd
++    endlocal & exit /b 0
++)
++
++"%PYTHON_EXE%" -m tools.membership_tester
++set "EXIT_CODE=%ERRORLEVEL%"
++
++popd
+ pause
++endlocal & exit /b %EXIT_CODE%
+--- a/test_suite/02_account_permissions/02_run_permission_matrix.bat
++++ b/test_suite/02_account_permissions/02_run_permission_matrix.bat
+@@ -1,9 +1,36 @@
+ @echo off
+ chcp 65001 >nul
+-cd /d C:\stockdata\stock_server
+-call .venv\Scripts\activate.bat
+-set PYTHONPATH=C:\stockdata\stock_server\test_suite\core;%PYTHONPATH%
+-set STOCK_SERVER_ROOT=C:\stockdata\stock_server
+-set STOCK_TEST_BASE_URL=http://127.0.0.1:8899
+-python -m auto_tests.permission_matrix_test
++setlocal EnableExtensions
++
++rem This script is two levels below the project root.
++for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
++
++pushd "%PROJECT_ROOT%" || (
++    echo [ERROR] 无法进入项目目录: %PROJECT_ROOT%
++    exit /b 1
++)
++
++if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (
++    set "PYTHON_EXE=%PROJECT_ROOT%\.venv\Scripts\python.exe"
++) else (
++    where python >nul 2>&1
++    if errorlevel 1 (
++        echo [ERROR] 未找到 Python，也未找到 .venv\Scripts\python.exe。
++        popd
++        exit /b 1
++    )
++    set "PYTHON_EXE=python"
++)
++
++set "PYTHONPATH=%PROJECT_ROOT%\test_suite\core;%PYTHONPATH%"
++set "STOCK_SERVER_ROOT=%PROJECT_ROOT%"
++if not defined STOCK_TEST_BASE_URL set "STOCK_TEST_BASE_URL=http://127.0.0.1:8899"
++
++echo [INFO] 项目目录: %PROJECT_ROOT%
++echo [INFO] 测试地址: %STOCK_TEST_BASE_URL%
++"%PYTHON_EXE%" -m auto_tests.permission_matrix_test
++set "EXIT_CODE=%ERRORLEVEL%"
++
++popd
+ pause
++endlocal & exit /b %EXIT_CODE%
+--- a/test_suite/03_provider_catalog/run.bat
++++ b/test_suite/03_provider_catalog/run.bat
+@@ -1,9 +1,36 @@
+ @echo off
+ chcp 65001 >nul
+-cd /d C:\stockdata\stock_server
+-call .venv\Scripts\activate.bat
+-set PYTHONPATH=C:\stockdata\stock_server\test_suite\core;%PYTHONPATH%
+-set STOCK_SERVER_ROOT=C:\stockdata\stock_server
+-set STOCK_TEST_BASE_URL=http://127.0.0.1:8899
+-python -m auto_tests.catalog_count_test
++setlocal EnableExtensions
++
++rem This script is two levels below the project root.
++for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
++
++pushd "%PROJECT_ROOT%" || (
++    echo [ERROR] 无法进入项目目录: %PROJECT_ROOT%
++    exit /b 1
++)
++
++if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (
++    set "PYTHON_EXE=%PROJECT_ROOT%\.venv\Scripts\python.exe"
++) else (
++    where python >nul 2>&1
++    if errorlevel 1 (
++        echo [ERROR] 未找到 Python，也未找到 .venv\Scripts\python.exe。
++        popd
++        exit /b 1
++    )
++    set "PYTHON_EXE=python"
++)
++
++set "PYTHONPATH=%PROJECT_ROOT%\test_suite\core;%PYTHONPATH%"
++set "STOCK_SERVER_ROOT=%PROJECT_ROOT%"
++if not defined STOCK_TEST_BASE_URL set "STOCK_TEST_BASE_URL=http://127.0.0.1:8899"
++
++echo [INFO] 项目目录: %PROJECT_ROOT%
++echo [INFO] 测试地址: %STOCK_TEST_BASE_URL%
++"%PYTHON_EXE%" -m auto_tests.catalog_count_test
++set "EXIT_CODE=%ERRORLEVEL%"
++
++popd
+ pause
++endlocal & exit /b %EXIT_CODE%
+--- a/test_suite/04_all_data_interfaces/run.bat
++++ b/test_suite/04_all_data_interfaces/run.bat
+@@ -1,9 +1,36 @@
+ @echo off
+ chcp 65001 >nul
+-cd /d C:\stockdata\stock_server
+-call .venv\Scripts\activate.bat
+-set PYTHONPATH=C:\stockdata\stock_server\test_suite\core;%PYTHONPATH%
+-set STOCK_SERVER_ROOT=C:\stockdata\stock_server
+-set STOCK_TEST_BASE_URL=http://127.0.0.1:8899
+-python test_suite\core\all_data_interfaces_test.py
++setlocal EnableExtensions
++
++rem This script is two levels below the project root.
++for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
++
++pushd "%PROJECT_ROOT%" || (
++    echo [ERROR] 无法进入项目目录: %PROJECT_ROOT%
++    exit /b 1
++)
++
++if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (
++    set "PYTHON_EXE=%PROJECT_ROOT%\.venv\Scripts\python.exe"
++) else (
++    where python >nul 2>&1
++    if errorlevel 1 (
++        echo [ERROR] 未找到 Python，也未找到 .venv\Scripts\python.exe。
++        popd
++        exit /b 1
++    )
++    set "PYTHON_EXE=python"
++)
++
++set "PYTHONPATH=%PROJECT_ROOT%\test_suite\core;%PYTHONPATH%"
++set "STOCK_SERVER_ROOT=%PROJECT_ROOT%"
++if not defined STOCK_TEST_BASE_URL set "STOCK_TEST_BASE_URL=http://127.0.0.1:8899"
++
++echo [INFO] 项目目录: %PROJECT_ROOT%
++echo [INFO] 测试地址: %STOCK_TEST_BASE_URL%
++"%PYTHON_EXE%" "%PROJECT_ROOT%\test_suite\core\all_data_interfaces_test.py"
++set "EXIT_CODE=%ERRORLEVEL%"
++
++popd
+ pause
++endlocal & exit /b %EXIT_CODE%
+--- a/test_suite/05_cache/run.bat
++++ b/test_suite/05_cache/run.bat
+@@ -1,9 +1,36 @@
+ @echo off
+ chcp 65001 >nul
+-cd /d C:\stockdata\stock_server
+-call .venv\Scripts\activate.bat
+-set PYTHONPATH=C:\stockdata\stock_server\test_suite\core;%PYTHONPATH%
+-set STOCK_SERVER_ROOT=C:\stockdata\stock_server
+-set STOCK_TEST_BASE_URL=http://127.0.0.1:8899
+-python -m auto_tests.cache_test
++setlocal EnableExtensions
++
++rem This script is two levels below the project root.
++for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
++
++pushd "%PROJECT_ROOT%" || (
++    echo [ERROR] 无法进入项目目录: %PROJECT_ROOT%
++    exit /b 1
++)
++
++if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (
++    set "PYTHON_EXE=%PROJECT_ROOT%\.venv\Scripts\python.exe"
++) else (
++    where python >nul 2>&1
++    if errorlevel 1 (
++        echo [ERROR] 未找到 Python，也未找到 .venv\Scripts\python.exe。
++        popd
++        exit /b 1
++    )
++    set "PYTHON_EXE=python"
++)
++
++set "PYTHONPATH=%PROJECT_ROOT%\test_suite\core;%PYTHONPATH%"
++set "STOCK_SERVER_ROOT=%PROJECT_ROOT%"
++if not defined STOCK_TEST_BASE_URL set "STOCK_TEST_BASE_URL=http://127.0.0.1:8899"
++
++echo [INFO] 项目目录: %PROJECT_ROOT%
++echo [INFO] 测试地址: %STOCK_TEST_BASE_URL%
++"%PYTHON_EXE%" -m auto_tests.cache_test
++set "EXIT_CODE=%ERRORLEVEL%"
++
++popd
+ pause
++endlocal & exit /b %EXIT_CODE%
+--- a/test_suite/06_unit_tests/run.bat
++++ b/test_suite/06_unit_tests/run.bat
+@@ -1,6 +1,32 @@
+ @echo off
+ chcp 65001 >nul
+-cd /d C:\stockdata\stock_server
+-call .venv\Scripts\activate.bat
+-python -m unittest discover -s tests -p "test_*.py" -v
++setlocal EnableExtensions
++
++rem This script is two levels below the project root.
++for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
++
++pushd "%PROJECT_ROOT%" || (
++    echo [ERROR] 无法进入项目目录: %PROJECT_ROOT%
++    exit /b 1
++)
++
++if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (
++    set "PYTHON_EXE=%PROJECT_ROOT%\.venv\Scripts\python.exe"
++) else (
++    where python >nul 2>&1
++    if errorlevel 1 (
++        echo [ERROR] 未找到 Python，也未找到 .venv\Scripts\python.exe。
++        popd
++        exit /b 1
++    )
++    set "PYTHON_EXE=python"
++)
++
++echo [INFO] 项目目录: %PROJECT_ROOT%
++echo [INFO] Python: %PYTHON_EXE%
++"%PYTHON_EXE%" -m unittest discover -s tests -p "test_*.py" -v
++set "EXIT_CODE=%ERRORLEVEL%"
++
++popd
+ pause
++endlocal & exit /b %EXIT_CODE%

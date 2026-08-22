@@ -1,0 +1,22 @@
+{
+  "version": "spec-20260725-official-bootstrap-v1",
+  "previous_version": "seed-20260724_kaipanla_triple_snapshot_v1",
+  "created_at": "2026-07-25T04:51:11",
+  "change_type": "official_metadata_bootstrap_and_tester_ui_upgrade",
+  "interface_count": 140,
+  "provider_counts": {
+    "tushare": 138,
+    "kaipanla": 2
+  },
+  "official_verified_count": 3,
+  "official_bootstrap_interfaces": [
+    "tushare::etf_basic"
+  ],
+  "notes": [
+    "ETF基础信息按TuShare官方文档固化6个输入参数和14个输出字段。",
+    "所有TuShare种子规格移除fields业务输入，输出字段由后端规格固定全量请求。",
+    "其余137个TuShare接口通过管理员候选同步流程联网拉取、审查并发布。",
+    "测试台目录按API文档业务类目排序和筛选。"
+  ],
+  "specs_hash": "c06469d7b0140c5db7ba052a1e132346db89fa54716413a3b040097568bb47fa"
+}

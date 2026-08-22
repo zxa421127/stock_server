@@ -1,0 +1,19 @@
+/* migrated from routes/user_routes.py:131 */
+body { font-family: Arial, 'Microsoft YaHei', sans-serif; margin: 28px; line-height: 1.65; }
+            input, select { padding: 6px; min-width: 260px; }
+            button { padding: 6px 16px; }
+            table { border-collapse: collapse; }
+            th, td { padding: 8px; border: 1px solid #ddd; }
+            .muted { color: #666; }
+            .error { color: #b00020; }
+            .ok { color: #008000; }
+            textarea { width: 900px; max-width: 100%; }
+            .card { padding: 14px; border: 1px solid #ddd; background: #fafafa; max-width: 980px; margin-top: 18px; }
+            .api-box { padding: 14px; border: 1px solid #d0d7de; background: #f6f8fa; max-width: 980px; margin-top: 18px; }
+            .api-box h3 { margin-top: 0; }
+            .api-box details { margin: 10px 0; padding: 10px; border: 1px solid #ddd; background: #fff; }
+            .api-box summary { cursor: pointer; font-weight: bold; }
+            pre { white-space: pre-wrap; word-break: break-word; background: #0f172a; color: #e5e7eb; padding: 12px; border-radius: 6px; overflow-x: auto; }
+            code { font-family: Consolas, Menlo, Monaco, monospace; font-size: 13px; }
+            .endpoint-table th { background: #f3f4f6; }
+            .warn { color: #9a6700; }
