@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 """Recommended Windows production launcher."""
 import logging
+import os
+
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+
 
 from waitress import serve
 
@@ -10,7 +16,13 @@ from app import app, setup_logging, start_runtime_services
 if __name__ == "__main__":
     setup_logging()
     start_runtime_services()
-    logging.info("Waitress启动: http://%s:%s threads=%s", config.SERVER_HOST, config.SERVER_PORT, config.SERVER_THREADS)
+    logging.info(
+        "Waitress启动: env=%s http://%s:%s threads=%s",
+        config.APP_ENV,
+        config.SERVER_HOST,
+        config.SERVER_PORT,
+        config.SERVER_THREADS,
+    )
     serve(
         app,
         host=config.SERVER_HOST,

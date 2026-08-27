@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Application configuration loaded from the project-level .env file."""
+"""Application configuration loaded from environment-specific .env files."""
 from __future__ import annotations
 
 import calendar
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -10,7 +11,68 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env")
+
+
+# =====================================================
+# Environment loader
+# Support:
+#   APP_ENV=test  -> .env.test
+#   APP_ENV=prod  -> .env.prod
+# =====================================================
+
+APP_ENV = os.getenv(
+    "APP_ENV",
+    "test"
+).strip().lower()
+
+
+if APP_ENV in {"prod", "production"}:
+    ENV_FILE = BASE_DIR / ".env.prod"
+    APP_ENV = "prod"
+
+elif APP_ENV in {"test", "testing"}:
+    ENV_FILE = BASE_DIR / ".env.test"
+    APP_ENV = "test"
+
+else:
+    raise RuntimeError(
+        f"Unsupported APP_ENV={APP_ENV}"
+    )
+
+
+if not ENV_FILE.exists():
+    raise FileNotFoundError(
+        f"Missing environment configuration for APP_ENV={APP_ENV}"
+    )
+
+
+# Load only the selected environment file.
+# Never fall back to a shared .env file to avoid cross-environment leakage.
+load_dotenv(
+    dotenv_path=ENV_FILE,
+    override=True
+)
+
+# Do not print paths, filenames, or secrets.
+# Only record the selected environment identity.
+logging.getLogger(__name__).info(
+    "Environment loaded: %s",
+    APP_ENV
+)
+
+# Fail closed if the selected environment configuration is incomplete.
+if not os.getenv("SERVER_PORT"):
+    raise RuntimeError(
+        f"Missing SERVER_PORT in selected environment: {APP_ENV}"
+    )
+
+
+
+IS_PROD = APP_ENV == "prod"
+IS_TEST = APP_ENV == "test"
+
+
+
 
 
 def _get_bool(name: str, default: bool = False) -> bool:
@@ -90,10 +152,24 @@ DB_FILE = str(DB_FILE.resolve())
 SERVER_HOST = os.getenv("SERVER_HOST", "127.0.0.1").strip() or "127.0.0.1"
 ALLOW_DIRECT_PUBLIC_BIND = _get_bool("ALLOW_DIRECT_PUBLIC_BIND", False)
 SERVER_PORT = _get_int("SERVER_PORT", 8899, 1, 65535)
+
+# Environment identity guard:
+# test -> 8898, prod -> 8899
+# Prevent accidental cross-environment startup.
+_EXPECTED_ENV_PORT = {
+    "test": 8898,
+    "prod": 8899,
+}.get(APP_ENV)
+
+if _EXPECTED_ENV_PORT is not None and SERVER_PORT != _EXPECTED_ENV_PORT:
+    raise RuntimeError(
+        f"Environment/port mismatch: APP_ENV={APP_ENV}, SERVER_PORT={SERVER_PORT}, expected={_EXPECTED_ENV_PORT}"
+    )
+
 ENABLE_HTTP_ACCESS_LOG = _get_bool("ENABLE_HTTP_ACCESS_LOG", False)
 
 # Flask/admin
-APP_ENV = os.getenv("APP_ENV", "development").strip().lower() or "development"
+# APP_ENV initialized by environment loader above
 
 # Deployment-slot identity guard. Local ad-hoc development can leave it off,
 # but production and any explicit deployment slot fail closed unless enabled.
@@ -113,7 +189,7 @@ ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH", "").strip()
 # administrator authentication now uses project-managed mTLS client certificates.
 ADMIN_TOTP_SECRET = os.getenv("ADMIN_TOTP_SECRET", "").strip()
 ADMIN_REQUIRE_MFA = _get_bool("ADMIN_REQUIRE_MFA", False)
-ADMIN_CLIENT_CERT_REQUIRED = _get_bool("ADMIN_CLIENT_CERT_REQUIRED", APP_ENV == "production")
+ADMIN_CLIENT_CERT_REQUIRED = _get_bool("ADMIN_CLIENT_CERT_REQUIRED", IS_PROD)
 ADMIN_CLIENT_CERT_PROXY_SECRET = os.getenv("ADMIN_CLIENT_CERT_PROXY_SECRET", "").strip()
 ADMIN_CLIENT_CERT_ADMIN_HOST = os.getenv("ADMIN_CLIENT_CERT_ADMIN_HOST", "").strip().lower()
 ADMIN_CLIENT_CERT_VERIFY_HEADER = os.getenv("ADMIN_CLIENT_CERT_VERIFY_HEADER", "X-Admin-Client-Cert-Verify").strip()
@@ -127,10 +203,10 @@ ADMIN_CAPTCHA_LENGTH = _get_int("ADMIN_CAPTCHA_LENGTH", 5, 4, 8)
 ADMIN_CAPTCHA_WIDTH = _get_int("ADMIN_CAPTCHA_WIDTH", 180, 120, 320)
 ADMIN_CAPTCHA_HEIGHT = _get_int("ADMIN_CAPTCHA_HEIGHT", 58, 42, 120)
 API_TOKEN_HASH_SECRET = os.getenv("API_TOKEN_HASH_SECRET", "").strip()
-DB_AUTO_MIGRATE = _get_bool("DB_AUTO_MIGRATE", APP_ENV != "production")
-REQUIRE_EXTERNAL_WORKERS = _get_bool("REQUIRE_EXTERNAL_WORKERS", APP_ENV == "production")
+DB_AUTO_MIGRATE = _get_bool("DB_AUTO_MIGRATE", not IS_PROD)
+REQUIRE_EXTERNAL_WORKERS = _get_bool("REQUIRE_EXTERNAL_WORKERS", IS_PROD)
 ADMIN_IP_WHITELIST = _get_list("ADMIN_IP_WHITELIST")
-SESSION_COOKIE_SECURE = _get_bool("SESSION_COOKIE_SECURE", APP_ENV == "production")
+SESSION_COOKIE_SECURE = _get_bool("SESSION_COOKIE_SECURE", IS_PROD)
 SESSION_LIFETIME_MINUTES = _get_int("SESSION_LIFETIME_MINUTES", 480, 5, 10080)
 ALLOW_INSECURE_DEFAULTS = _get_bool("ALLOW_INSECURE_DEFAULTS", False)
 TRUST_PROXY_HEADERS = _get_bool("TRUST_PROXY_HEADERS", False)
@@ -151,7 +227,7 @@ REGISTRATION_GLOBAL_MAX_REQUESTS = _get_int("REGISTRATION_GLOBAL_MAX_REQUESTS", 
 REGISTRATION_GLOBAL_WINDOW_SECONDS = _get_int("REGISTRATION_GLOBAL_WINDOW_SECONDS", 60, 10, 86400)
 REGISTRATION_GLOBAL_LOCK_SECONDS = _get_int("REGISTRATION_GLOBAL_LOCK_SECONDS", 60, 10, 86400)
 REGISTRATION_CAPTCHA_LENGTH = _get_int("REGISTRATION_CAPTCHA_LENGTH", 5, 4, 8)
-REGISTRATION_CONTACT_VERIFICATION_REQUIRED = _get_bool("REGISTRATION_CONTACT_VERIFICATION_REQUIRED", APP_ENV == "production")
+REGISTRATION_CONTACT_VERIFICATION_REQUIRED = _get_bool("REGISTRATION_CONTACT_VERIFICATION_REQUIRED", IS_PROD)
 REGISTRATION_EMAIL_VERIFICATION_ENABLED = _get_bool("REGISTRATION_EMAIL_VERIFICATION_ENABLED", True)
 REGISTRATION_SMS_VERIFICATION_ENABLED = _get_bool("REGISTRATION_SMS_VERIFICATION_ENABLED", False)
 CONTACT_VERIFICATION_HMAC_SECRET = os.getenv("CONTACT_VERIFICATION_HMAC_SECRET", "").strip()
@@ -185,7 +261,7 @@ REDIS_URL = os.getenv("REDIS_URL", "").strip()
 REDIS_KEY_PREFIX = os.getenv("REDIS_KEY_PREFIX", "stock_server").strip() or "stock_server"
 REDIS_CONNECT_TIMEOUT_SECONDS = float(os.getenv("REDIS_CONNECT_TIMEOUT_SECONDS", "1.0") or 1.0)
 REDIS_SOCKET_TIMEOUT_SECONDS = float(os.getenv("REDIS_SOCKET_TIMEOUT_SECONDS", "1.0") or 1.0)
-REDIS_REQUIRED = _get_bool("REDIS_REQUIRED", APP_ENV == "production")
+REDIS_REQUIRED = _get_bool("REDIS_REQUIRED", IS_PROD)
 
 # Public plan RPM is defined by the active plan. DEFAULT is fallback-only.
 # MIN is a compatibility floor; keep it at 1 so explicit 120/300 RPM plans are not lifted.

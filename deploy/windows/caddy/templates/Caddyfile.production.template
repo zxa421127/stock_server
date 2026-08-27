@@ -1,0 +1,158 @@
+﻿lifesupermarket.cn, www.lifesupermarket.cn {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:8080
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	log {
+		output file C:/caddy/logs/lifesupermarket_access.log {
+			roll_size 50MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+		format json
+	}
+}
+
+api.lifesupermarket.cn {
+	encode zstd gzip
+
+	route {
+		@admin_paths path /admin /admin/*
+		respond @admin_paths 404
+
+		reverse_proxy 127.0.0.1:8899 {
+			header_up -X-Admin-*
+		}
+	}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	log {
+		output file C:/caddy/logs/api_access.log {
+			roll_size 50MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+		format json
+	}
+}
+
+test-api.lifesupermarket.cn {
+	encode zstd gzip
+
+	route {
+		@admin_paths path /admin /admin/*
+		respond @admin_paths 404
+
+		reverse_proxy 127.0.0.1:8898 {
+			header_up -X-Admin-*
+		}
+	}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	log {
+		output file C:/caddy/logs/test_api_access.log {
+			roll_size 50MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+		format json
+	}
+}
+
+test-admin-api.lifesupermarket.cn {
+	encode zstd gzip
+
+	tls {
+		client_auth {
+			mode require_and_verify
+			trust_pool file C:/stockdata/stock_server_test/security/test-admin-ca/admin-client-ca.crt.pem
+		}
+	}
+
+	route {
+		@admin_root path /
+		redir @admin_root /admin/login 302
+
+		@admin_allowed path /admin /admin/* /static /static/*
+		reverse_proxy @admin_allowed 127.0.0.1:8898 {
+			header_up -X-Admin-Client-Cert
+                        header_up X-Admin-Proxy-Auth "{{TEST_ADMIN_PROXY_AUTH}}"
+			header_up X-Admin-Client-Cert-Verify "SUCCESS"
+			header_up X-Admin-Client-Cert-DER "{tls_client_certificate_der_base64}"
+			header_up X-Admin-Client-Cert-Fingerprint "{tls_client_fingerprint}"
+			header_up X-Admin-Client-Cert-Serial "{tls_client_serial}"
+			header_up X-Admin-Client-Cert-Subject "{tls_client_subject}"
+		}
+		respond 404
+	}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	log {
+		output file C:/caddy/logs/test_admin_api_access.log {
+			roll_size 50MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+		format json
+	}
+}
+
+admin-api.lifesupermarket.cn {
+	encode zstd gzip
+
+	tls {
+		client_auth {
+			mode require_and_verify
+			trust_pool file C:/caddy/certs/prod-admin-client-ca.crt.pem
+		}
+	}
+
+	route {
+		@admin_root path /
+		redir @admin_root /admin/login 302
+
+		@admin_allowed path /admin /admin/* /static /static/*
+		request_header @admin_allowed -X-Admin-*
+		reverse_proxy @admin_allowed 127.0.0.1:8899 {
+                       header_up X-Admin-Proxy-Auth "{{PROD_ADMIN_PROXY_AUTH}}"
+			header_up X-Admin-Client-Cert-Verify "SUCCESS"
+			header_up X-Admin-Client-Cert-DER "{tls_client_certificate_der_base64}"
+			header_up X-Admin-Client-Cert-Fingerprint "{tls_client_fingerprint}"
+			header_up X-Admin-Client-Cert-Serial "{tls_client_serial}"
+			header_up X-Admin-Client-Cert-Subject "{tls_client_subject}"
+		}
+
+		respond 404
+	}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	log {
+		output file C:/caddy/logs/admin_api_access.log {
+			roll_size 50MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+		format json
+	}
+}

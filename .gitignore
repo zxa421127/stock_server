@@ -1,56 +1,130 @@
+# ============================================================
 # Python
+# ============================================================
+
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
+
+# ============================================================
 # Virtual environments
+# ============================================================
+
 .venv/
 venv/
 env/
 
+
+# ============================================================
 # IDE / OS
+# ============================================================
+
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
 
-# Secrets and runtime data
+
+# ============================================================
+# Secrets / environment configuration
+# ============================================================
+
+# Never commit real environment files
 .env
-*.db
-*.sqlite3
-data/*
-!data/.gitkeep
-data-dev/
-data-test/
-logs/*
-!logs/.gitkeep
-logs-dev/
+.env.*
+
+# Keep only the sanitized example/template
+!.env.example
+
+# Local token records
 token_record.txt
 
-# Build artifacts
+
+# ============================================================
+# Databases / runtime data
+# ============================================================
+
+*.db
+*.sqlite
+*.sqlite3
+
+data/*
+!data/.gitkeep
+
+data-dev/
+data-test/
+data-prod/
+
+
+# ============================================================
+# Runtime logs
+# ============================================================
+
+logs/*
+!logs/.gitkeep
+
+logs-dev/
+logs-test/
+logs-prod/
+
+*.log
+
+
+# ============================================================
+# Build / release artifacts
+# ============================================================
+
 *.zip
 dist/
 build/
 
+
+# ============================================================
 # Administrator client-certificate private material
+# ============================================================
+
 security/admin-client-ca/
 security/admin-client-certificates/
+
 *.p12
 *.pfx
+*.key
 *.key.pem
 
-# Local patch backups
-patch_backups/
 
-# Certificates
+# ============================================================
+# Certificates generated for local/runtime deployment
+# ============================================================
+
 security/*-ca/
 security/*-certs/
 *.crt.pem
 
-# Backup files
-*.backup*
 
-# Deployment audit reports
+# ============================================================
+# Local backups / temporary files
+# ============================================================
+
+patch_backups/
+
+*.backup*
+*.bak
+*.bak.*
+*.orig
+*.rej
+*.tmp
+*~
+
+
+# ============================================================
+# Deployment-generated audit reports
+# ============================================================
+
 deploy/*tree*.txt
 deploy_tree.txt
