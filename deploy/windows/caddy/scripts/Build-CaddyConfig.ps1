@@ -76,10 +76,8 @@ $TestSecret
 if($DryRun){
 
     Write-Host "DRY RUN ONLY"
-
-    Write-Host (
-        $content.Substring(0,[Math]::Min(500,$content.Length))
-    )
+    Write-Host "TEMPLATE_RENDER=PASS"
+    Write-Host "RENDERED_CONTENT_SUPPRESSED=TRUE"
 
     exit 0
 }

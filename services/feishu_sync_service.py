@@ -536,7 +536,7 @@ def _sync_feishu_to_local_impl() -> SyncResult:
         taobao_nick = safe_text(fields.get("淘宝昵称")).strip() or None
 
         if _is_reserved_membership_test_account(phone):
-            logging.info("[同步] 跳过本地测试账号(飞书登记): record_id=%s phone=%s", record_id, phone)
+            logging.info("[同步] 跳过本地测试账号(飞书登记): record_id=%s", record_id)
             continue
 
         identity_user_id, identity_reason = _find_unique_local_user_by_identity(

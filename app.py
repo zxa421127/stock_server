@@ -438,7 +438,10 @@ def create_app(*, start_background: bool = False, configure_logging: bool = Fals
         mark_api_auth_state(
             "internal_error", error_code="internal_error", error_message=str(exc)
         )
-        logging.exception("[全局异常] %s", exc)
+        logging.error(
+            "[全局异常] type=%s",
+            type(exc).__name__,
+        )
         return make_resp(False, [], "服务器内部异常，请联系管理员"), 500
 
     if start_background:
