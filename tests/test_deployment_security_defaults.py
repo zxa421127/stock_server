@@ -16,13 +16,59 @@ def test_production_env_template_uses_secure_session_cookie():
     assert "SESSION_COOKIE_SECURE=True" in template
 
 
+def _numeric_version(value: str) -> tuple[int, ...]:
+    return tuple(
+        int(part)
+        for part in value.split(".")
+    )
+
+
 def test_requirements_exclude_known_vulnerable_web_stack_versions():
     requirements = Path("requirements.txt").read_text(encoding="utf-8")
-    assert "Flask>=3.1.3,<4" in requirements
-    assert "Werkzeug>=3.1.8,<4" in requirements
-    assert "Flask-Cors>=6.0.5,<7" in requirements
-    assert "python-dotenv>=1.2.2,<2" in requirements
-    assert "requests>=2.34.2,<3" in requirements
-    assert "waitress>=3.0.2,<4" in requirements
-    for vulnerable_pin in ("Flask==2.3.3", "Flask-Cors==4.0.0", "python-dotenv==1.0.0"):
+    active = [
+        line.strip()
+        for line in requirements.splitlines()
+        if line.strip()
+        and not line.lstrip().startswith("#")
+    ]
+
+    assert active
+    assert all("==" in line for line in active)
+
+    pins = {}
+
+    for line in active:
+        requirement = (
+            line.split(";", 1)[0].strip()
+        )
+
+        name, version = requirement.split(
+            "==",
+            1,
+        )
+
+        pins[name.lower()] = version.strip()
+
+    minimums = {
+        "flask": (3, 1, 3),
+        "werkzeug": (3, 1, 8),
+        "flask-cors": (6, 0, 5),
+        "python-dotenv": (1, 2, 2),
+        "requests": (2, 34, 2),
+        "waitress": (3, 0, 2),
+    }
+
+    assert set(minimums).issubset(pins)
+
+    for name, minimum in minimums.items():
+        assert (
+            _numeric_version(pins[name])
+            >= minimum
+        )
+
+    for vulnerable_pin in (
+        "Flask==2.3.3",
+        "Flask-Cors==4.0.0",
+        "python-dotenv==1.0.0",
+    ):
         assert vulnerable_pin not in requirements

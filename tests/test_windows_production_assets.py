@@ -23,8 +23,10 @@ def test_windows_nginx_template_enforces_mtls_and_hides_admin_on_public_host():
 def test_windows_dependency_installer_uses_python_module_pip_and_verifies_imports():
     text = _read("deploy/windows/install-dependencies.ps1")
     assert "-m pip" in text
-    assert "requirements.txt" in text
-    assert "https://pypi.org/simple" in text
+    assert "requirements.lock" in text
+    assert "--require-hashes" in text
+    assert "mirrors.cloud.tencent.com/pypi/simple" in text
+    assert "https://pypi.org/simple" not in text
     assert "PIL" in text and "cryptography" in text
     assert "Invoke-Expression" not in text
 

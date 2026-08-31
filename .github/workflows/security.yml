@@ -8,17 +8,18 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: pip
-      - run: python -m pip install --upgrade pip
-      - run: pip install -r requirements.lock -r requirements-dev.txt
+      - run: python -m pip install --upgrade pip==26.2 --index-url https://mirrors.cloud.tencent.com/pypi/simple/
+      - run: python -m pip install --require-hashes -r requirements-ci.lock --index-url https://mirrors.cloud.tencent.com/pypi/simple/
+      - run: python -m pip check
       - run: pytest -q tests
       - run: python -m compileall -q app.py config.py db_utils.py routes services integrations middleware utils tools
-      - run: python -m pip_audit -r requirements.lock --strict
+      - run: python -m pip_audit -r requirements-ci.lock --strict
       - run: python -m tools.release.build_production_package --output dist/stock-server-production.zip
       - run: python -m tools.security.scan_release_secrets dist/stock-server-production.zip
