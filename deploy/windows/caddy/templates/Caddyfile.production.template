@@ -129,8 +129,8 @@ admin-api.lifesupermarket.cn {
 		redir @admin_root /admin/login 302
 
 		@admin_allowed path /admin /admin/* /static /static/*
-		request_header @admin_allowed -X-Admin-*
 		reverse_proxy @admin_allowed 127.0.0.1:8899 {
+			header_up -X-Admin-Client-Cert
                        header_up X-Admin-Proxy-Auth "{{PROD_ADMIN_PROXY_AUTH}}"
 			header_up X-Admin-Client-Cert-Verify "SUCCESS"
 			header_up X-Admin-Client-Cert-DER "{tls_client_certificate_der_base64}"

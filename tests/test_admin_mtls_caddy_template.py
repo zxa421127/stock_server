@@ -1,7 +1,8 @@
 from pathlib import Path
 
 
-TEMPLATE = Path("deploy/windows/caddy/stock-server-four-hosts.Caddyfile")
+TEMPLATE = Path("deploy/windows/caddy/templates/stock-server-four-hosts.Caddyfile")
+PRODUCTION_TEMPLATE = Path("deploy/windows/caddy/templates/Caddyfile.production.template")
 
 
 def _text() -> str:
@@ -101,3 +102,32 @@ def test_caddy_template_keeps_test_and_production_placeholders_distinct():
     assert text.count("REPLACE_TEST_ADMIN_CA_FILE") == 1
     assert text.count("REPLACE_PROD_ADMIN_PROXY_SECRET") == 1
     assert text.count("REPLACE_TEST_ADMIN_PROXY_SECRET") == 1
+
+def test_production_template_admin_hosts_follow_trusted_header_contract():
+    text = PRODUCTION_TEMPLATE.read_text(encoding="utf-8-sig")
+    assert "lifesupermarket.cn, www.lifesupermarket.cn" in text
+    expectations = (
+        (
+            "admin-api.lifesupermarket.cn",
+            "127.0.0.1:8899",
+            "{{PROD_ADMIN_PROXY_AUTH}}",
+        ),
+        (
+            "test-admin-api.lifesupermarket.cn",
+            "127.0.0.1:8898",
+            "{{TEST_ADMIN_PROXY_AUTH}}",
+        ),
+    )
+    for host, upstream, secret_placeholder in expectations:
+        block = _site_block(text, host)
+        assert "mode require_and_verify" in block
+        assert f"reverse_proxy @admin_allowed {upstream}" in block
+        assert "request_header @admin_allowed -X-Admin-*" not in block
+        assert "header_up -X-Admin-*" not in block
+        assert "header_up -X-Admin-Client-Cert" in block
+        assert f'header_up X-Admin-Proxy-Auth "{secret_placeholder}"' in block
+        assert 'header_up X-Admin-Client-Cert-Verify "SUCCESS"' in block
+        assert 'header_up X-Admin-Client-Cert-DER "{tls_client_certificate_der_base64}"' in block
+        assert 'header_up X-Admin-Client-Cert-Fingerprint "{tls_client_fingerprint}"' in block
+        assert 'header_up X-Admin-Client-Cert-Serial "{tls_client_serial}"' in block
+        assert 'header_up X-Admin-Client-Cert-Subject "{tls_client_subject}"' in block
